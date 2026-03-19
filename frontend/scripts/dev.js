@@ -52,7 +52,7 @@ esbuild.context({
     // Serve static files
     let filePath = req.url === '/' ? 'src/index.html' : req.url.startsWith('/dist') ? req.url.slice(1) : req.url.startsWith('/src/') ? req.url.slice(1) : 'src/index.html';
     const ext = path.extname(filePath);
-    const contentType = ext === '.js' ? 'application/javascript' : ext === '.map' ? 'application/json' : ext === '.css' ? 'text/css' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : 'text/html';
+    const contentType = ext === '.js' ? 'application/javascript' : ext === '.map' ? 'application/json' : ext === '.css' ? 'text/css' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.svg' ? 'image/svg+xml' : 'text/html';
     try {
       res.writeHead(200, { 'Content-Type': contentType });
       res.end(fs.readFileSync(filePath));

@@ -18,6 +18,11 @@ const LEVELS: Record<number, string> = {
 let currentGameId: string | null = null;
 let board: Board | null = null;
 let showActiveOnly = true;
+let gameIsActive = false;
+let moveHistory: string[] = [];
+let viewIndex = 0;
+
+const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 const loginScreenEl  = document.getElementById('login-screen')!;
 const appEl          = document.getElementById('app')!;
@@ -32,6 +37,8 @@ const moveListEl     = document.getElementById('move-list')!;
 const gameListEl     = document.getElementById('game-list')!;
 const newGameBtn     = document.getElementById('new-game-btn')!;
 const resignBtn      = document.getElementById('resign-btn')!;
+const navBackBtn     = document.getElementById('nav-back-btn')!;
+const navFwdBtn      = document.getElementById('nav-fwd-btn')!;
 const overlayEl      = document.getElementById('overlay')!;
 const overlayMsg     = document.getElementById('overlay-msg')!;
 const overlayNewGame = document.getElementById('overlay-new-game')!;
@@ -125,13 +132,18 @@ async function startNewGame(): Promise<void> {
 
 function beginGame(state: api.GameState): void {
   currentGameId = state.gameId;
+  gameIsActive = true;
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
   resignBtn.classList.remove('hidden');
   moveListEl.classList.remove('hidden');
   newGameBtn.classList.add('hidden');
+  lobbyBtn.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
   board.setFen(state.fen, true);
+  setMoveHistory([]);
+  navBackBtn.classList.remove('hidden');
+  navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel);
   renderMoveList([]);
   refreshGameList();
@@ -143,6 +155,7 @@ async function loadGame(gameId: string): Promise<void> {
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
   const active = ['active', 'check'].includes(state.status);
+  gameIsActive = active;
   if (active) {
     resignBtn.classList.remove('hidden');
     newGameBtn.classList.add('hidden');
@@ -150,9 +163,13 @@ async function loadGame(gameId: string): Promise<void> {
     resignBtn.classList.add('hidden');
     newGameBtn.classList.remove('hidden');
   }
+  lobbyBtn.classList.remove('hidden');
   moveListEl.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
   board.setFen(state.fen, active);
+  setMoveHistory(state.moves);
+  navBackBtn.classList.remove('hidden');
+  navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel);
   renderMoveList(state.moves);
 }
@@ -165,13 +182,22 @@ async function handleMove(from: string, to: string): Promise<void> {
 
     const result = await api.postMove(currentGameId, from, to);
     const active = ['active', 'check'].includes(result.status);
+
+    if (result.computerMove) {
+      board!.setFen(result.move.fenAfter, false);
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
     board!.setFen(result.fen, active);
 
     const state = await api.getGame(currentGameId);
+    gameIsActive = active;
+    setMoveHistory(state.moves);
     updateStatus(result.status, result.turn, state.mode, state.computerLevel);
     renderMoveList(state.moves);
 
     if (!['active', 'check'].includes(result.status)) {
+      gameIsActive = false;
       showOverlay(result.status);
     }
     refreshGameList();
@@ -198,6 +224,31 @@ function updateStatus(status: string, turn: string, mode: api.GameMode, level: n
     resigned: 'Resigned',
   };
   statusEl.textContent = statusMap[status] ?? status;
+}
+
+function setMoveHistory(moves: api.MoveRecord[]): void {
+  moveHistory = [INITIAL_FEN, ...moves.map(m => m.fenAfter)];
+  viewIndex = moveHistory.length - 1;
+  updateNavButtons();
+}
+
+function updateNavButtons(): void {
+  navBackBtn.disabled = viewIndex <= 0;
+  navFwdBtn.disabled = viewIndex >= moveHistory.length - 1;
+}
+
+function navigateTo(index: number): void {
+  if (index < 0 || index >= moveHistory.length) return;
+  viewIndex = index;
+  const isLatest = viewIndex === moveHistory.length - 1;
+  board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive);
+  updateNavButtons();
+  highlightMoveInList(viewIndex - 1); // viewIndex 0 = before any moves
+}
+
+function highlightMoveInList(moveIdx: number): void {
+  const spans = moveListEl.querySelectorAll<HTMLElement>('.move-san');
+  spans.forEach((s, i) => s.classList.toggle('move-current', i === moveIdx));
 }
 
 function renderMoveList(moves: api.MoveRecord[]): void {
@@ -239,6 +290,9 @@ function returnToStart(): void {
   boardEl.parentElement!.classList.add('empty');
   resignBtn.classList.add('hidden');
   newGameBtn.classList.remove('hidden');
+  lobbyBtn.classList.add('hidden');
+  navBackBtn.classList.add('hidden');
+  navFwdBtn.classList.add('hidden');
   statusEl.textContent = '';
   moveListEl.innerHTML = '';
   moveListEl.classList.add('hidden');
@@ -280,7 +334,14 @@ resignBtn.addEventListener('click', async () => {
   refreshGameList();
 });
 
-document.getElementById('lobby-btn')!.addEventListener('click', returnToStart);
+const lobbyBtn = document.getElementById('lobby-btn')!;
+lobbyBtn.classList.add('hidden');
+lobbyBtn.addEventListener('click', returnToStart);
+
+navBackBtn.classList.add('hidden');
+navFwdBtn.classList.add('hidden');
+navBackBtn.addEventListener('click', () => navigateTo(viewIndex - 1));
+navFwdBtn.addEventListener('click', () => navigateTo(viewIndex + 1));
 loginGoogleBtn.addEventListener('click', () => loginWithGoogle());
 loginEmailBtn.addEventListener('click', () => loginWithEmailPassword());
 logoutBtn.addEventListener('click', () => logout());

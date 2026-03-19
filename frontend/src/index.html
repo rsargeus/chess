@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Chess</title>
+  <link rel="icon" type="image/svg+xml" href="/src/favicon.svg">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     .hidden { display: none !important; }
@@ -205,6 +206,12 @@
     }
     .move-list-row #move-list { flex: 1; }
     .move-list-row #resign-btn { flex-shrink: 0; }
+    .nav-row {
+      display: flex;
+      gap: 8px;
+    }
+    .nav-row .btn { flex: 1; font-size: 1rem; }
+    .nav-row .btn:disabled { opacity: 0.3; cursor: default; }
     #status {
       font-size: 1rem;
       font-weight: 600;
@@ -228,6 +235,7 @@
     }
     .move-num { color: #9a8060; }
     .move-san { color: #e8d5b0; }
+    .move-san.move-current { color: #e2b96f; font-weight: 700; }
 
     /* Game over overlay */
     .overlay {
@@ -524,6 +532,10 @@
         <div class="move-list-row">
           <div id="move-list" class="hidden"></div>
           <button id="resign-btn" class="btn btn-secondary hidden">Resign</button>
+        </div>
+        <div class="nav-row">
+          <button id="nav-back-btn" class="btn btn-secondary hidden">&#8592;</button>
+          <button id="nav-fwd-btn" class="btn btn-secondary hidden">&#8594;</button>
         </div>
       </div>
     </main>
