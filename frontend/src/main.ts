@@ -1,6 +1,7 @@
 import { Board } from './board';
 import * as api from './api';
 import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
+import { playMove, playCapture, playCheck, playGameOver } from './sound';
 
 const LEVELS: Record<number, string> = {
   1: 'Beginner',
@@ -183,9 +184,16 @@ async function handleMove(from: string, to: string): Promise<void> {
     const result = await api.postMove(currentGameId, from, to);
     const active = ['active', 'check'].includes(result.status);
 
+    // Player move sound
+    if (result.move.san.includes('x')) playCapture();
+    else playMove();
+
     if (result.computerMove) {
       board!.setFen(result.move.fenAfter, false);
       await new Promise(r => setTimeout(r, 1000));
+      // Computer move sound
+      if (result.computerMove.san.includes('x')) playCapture();
+      else playMove();
     }
 
     board!.setFen(result.fen, active);
@@ -198,7 +206,10 @@ async function handleMove(from: string, to: string): Promise<void> {
 
     if (!['active', 'check'].includes(result.status)) {
       gameIsActive = false;
+      playGameOver();
       showOverlay(result.status);
+    } else if (result.status === 'check') {
+      playCheck();
     }
     refreshGameList();
   } catch (err: any) {
