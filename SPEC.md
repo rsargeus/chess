@@ -2,7 +2,7 @@
 
 ## Overview
 
-A browser-based chess game with a REST API backend. The frontend handles rendering and user interaction; the backend enforces game rules and manages state. All games and moves are persisted in a database.
+A browser-based chess game with a REST API backend, Auth0 authentication, Stockfish AI opponent, and full game/move persistence in MongoDB Atlas. The frontend is plain TypeScript with no framework; the backend is Express + TypeScript.
 
 ---
 
@@ -12,16 +12,17 @@ A browser-based chess game with a REST API backend. The frontend handles renderi
 - **Runtime:** Node.js
 - **Framework:** Express
 - **Language:** TypeScript
-- **Chess logic:** `chess.js` (move validation, check/checkmate detection, FEN/PGN)
-- **Chess engine:** Stockfish (via `stockfish` npm package, runs as a child process on the backend)
-- **Database:** MongoDB via `mongoose`
-- **Local dev:** MongoDB running in Docker (`docker-compose.yml` provided)
+- **Chess logic:** `chess.js` (move validation, check/checkmate detection, FEN)
+- **Chess engine:** Stockfish via `stockfish` npm package (ASM.js build, runs as a child process)
+- **Database:** MongoDB Atlas via `mongoose`
+- **Auth:** `express-oauth2-jwt-bearer` (validates Auth0 JWTs on all `/games` routes)
 
 ### Frontend
 - **Plain HTML + CSS + TypeScript** (no framework)
 - **Bundler:** esbuild
-- **Chess board rendering:** `chessboard.js` or hand-rolled SVG/CSS board
-- **Communication:** `fetch` against the REST API
+- **Auth:** `@auth0/auth0-spa-js`
+- **Chess board:** hand-rolled SVG board with cburnett-style pieces
+- **Communication:** `fetch` against the REST API with `Authorization: Bearer <token>` headers
 
 ---
 
@@ -31,77 +32,94 @@ A browser-based chess game with a REST API backend. The frontend handles renderi
 chess/
 ├── backend/
 │   ├── src/
-│   │   ├── index.ts        # Express app entry point
-│   │   ├── db.ts           # Mongoose connection
+│   │   ├── index.ts              # Express app entry point
+│   │   ├── db.ts                 # Mongoose connection
+│   │   ├── middleware/
+│   │   │   └── auth.ts           # JWT validation middleware
 │   │   ├── models/
-│   │   │   ├── Game.ts     # Game mongoose model/schema
-│   │   │   └── Move.ts     # Move mongoose model/schema
+│   │   │   ├── Game.ts           # Game mongoose model/schema
+│   │   │   └── Move.ts           # Move mongoose model/schema
 │   │   ├── routes/
-│   │   │   └── game.ts     # All /games routes
-│   │   ├── gameStore.ts    # DB-backed game state logic
-│   │   └── stockfish.ts    # Stockfish child process wrapper
+│   │   │   └── game.ts           # All /games routes
+│   │   ├── gameStore.ts          # DB-backed game state logic
+│   │   └── stockfish.ts          # Stockfish child process wrapper
 │   ├── package.json
 │   └── tsconfig.json
-├── docker-compose.yml      # MongoDB for local dev
 ├── frontend/
+│   ├── scripts/
+│   │   ├── build.js              # esbuild production build
+│   │   └── dev.js                # esbuild watch + dev server + /games proxy
 │   ├── src/
-│   │   ├── index.html
-│   │   ├── main.ts         # App entry point
-│   │   ├── board.ts        # Board rendering
-│   │   └── api.ts          # REST client
+│   │   ├── index.html            # App shell + all CSS
+│   │   ├── main.ts               # App entry point, auth boot, UI logic
+│   │   ├── board.ts              # Board rendering + click handling
+│   │   ├── api.ts                # REST client (attaches JWT to every request)
+│   │   ├── auth.ts               # Auth0 SPA client wrapper
+│   │   ├── chess-hero.png        # Login page background image
+│   │   └── chess-welcome.png     # Lobby welcome image
 │   ├── package.json
 │   └── tsconfig.json
+├── .gitignore
+├── CLAUDE.md
+├── README.md
 └── SPEC.md
 ```
+
+---
+
+## Authentication
+
+Auth0 is used for authentication with two connection types:
+- **Google** (social login)
+- **Username-Password-Authentication** (email + password)
+
+### Flow
+1. App loads → `initAuth()` initialises the Auth0 SPA client
+2. If not authenticated → show login screen
+3. Login redirects to Auth0 Universal Login, returns with a JWT
+4. JWT is stored by the Auth0 SDK and attached to every API request as `Authorization: Bearer <token>`
+5. Backend validates the JWT using `express-oauth2-jwt-bearer`; `req.auth.payload.sub` is the user ID
+
+### User isolation
+Each game is stored with a `userId` field (the Auth0 `sub` claim). All queries are scoped to the authenticated user — users can only see and interact with their own games.
 
 ---
 
 ## Game Modes
 
 ### `pvp` — Two Players
-Pass-and-play. Both sides are controlled by humans sharing the same browser. The backend applies moves and returns updated state; no automatic responses.
+Pass-and-play. Both sides are controlled by humans sharing the same browser.
 
 ### `vs_computer` — Player vs Computer
-The human always plays **White**. After each valid player move, the backend queries Stockfish for the computer's reply, applies it, then returns both moves in the response. The `POST /games/:gameId/moves` response includes an additional `computerMove` field.
+The human plays **White**. After each valid player move, the backend queries Stockfish for the computer's reply, applies it, and returns both moves in the response.
 
 #### Computer AI — Stockfish
 
-Stockfish runs as a persistent **child process** on the backend, managed by `backend/src/stockfish.ts`. Communication uses the UCI (Universal Chess Interface) protocol over stdin/stdout.
+Stockfish runs as a persistent **child process** managed by `backend/src/stockfish.ts`, communicating over UCI (stdin/stdout).
 
 **Flow for each computer move:**
 1. Send `position fen <fen>` to Stockfish
-2. Send a `go` command with the active search constraint (see parameters below)
+2. Send `go movetime <ms>` (time varies by level)
 3. Wait for `bestmove <move>` in stdout
 4. Apply the move via `chess.js` and persist to the database
+5. Fallback to a random legal move if Stockfish throws
 
-**Stockfish is installed** as the `stockfish` npm package (ships a pre-built binary), so no system installation is required.
+#### Difficulty Levels
 
-#### Computer Difficulty — Levels
+| Level | Label | ELO | Move time |
+|-------|-------|-----|-----------|
+| 1 | Beginner | 800 | 200ms |
+| 2 | Novice | 1000 | 200ms |
+| 3 | Casual | 1200 | 300ms |
+| 4 | Intermediate | 1400 | 300ms |
+| 5 | Club Player | 1600 | 500ms |
+| 6 | Advanced | 1800 | 500ms |
+| 7 | Expert | 2000 | 1000ms |
+| 8 | Master | 2200 | 1000ms |
+| 9 | Int. Master | 2600 | 1500ms |
+| 10 | Grandmaster | — | 3000ms |
 
-The player selects a **level from 1 to 10**, similar to chess.com. Each level maps to an ELO rating internally; the frontend only exposes the level number with a friendly label.
-
-| Level | Label | ELO | Notes |
-|-------|-------|-----|-------|
-| 1 | Beginner | 800 | Random-ish play, many blunders |
-| 2 | Novice | 1000 | |
-| 3 | Casual | 1200 | Club beginner |
-| 4 | Intermediate | 1400 | |
-| 5 | Club Player | 1600 | |
-| 6 | Advanced | 1800 | |
-| 7 | Expert | 2000 | |
-| 8 | Master | 2200 | |
-| 9 | International Master | 2600 | |
-| 10 | Grandmaster | 3190 | Near-maximum Stockfish strength |
-
-Levels 1–9 use Stockfish's `UCI_LimitStrength` + `UCI_Elo` options. Level 10 disables the strength limit and lets Stockfish search at full depth.
-
-The frontend shows the level picker as a visual slider or set of numbered buttons, with the label displayed alongside. The raw ELO is never shown to the user.
-
-#### Computer Settings stored on the Game
-
-The chosen level is stored on the game document so the same strength applies for every computer move throughout the game.
-
----
+Levels 1–9 use `UCI_LimitStrength` + `UCI_Elo`. Level 10 disables strength limiting (full Stockfish strength).
 
 ---
 
@@ -111,10 +129,11 @@ The chosen level is stored on the game document so the same strength applies for
 ```ts
 {
   _id: ObjectId,
-  fen: string,          // current board position (FEN)
-  status: string,       // "active" | "check" | "checkmate" | "stalemate" | "draw" | "resigned"
-  mode: string,         // "pvp" | "vs_computer"
-  computerLevel: number | null,  // 1–10, only set when mode === "vs_computer"
+  userId: string,               // Auth0 sub claim
+  fen: string,                  // current board position (FEN)
+  status: string,               // "active" | "check" | "checkmate" | "stalemate" | "draw" | "resigned"
+  mode: string,                 // "pvp" | "vs_computer"
+  computerLevel: number | null, // 1–10, null when mode is "pvp"
   createdAt: Date,
   updatedAt: Date
 }
@@ -124,36 +143,31 @@ The chosen level is stored on the game document so the same strength applies for
 ```ts
 {
   _id: ObjectId,
-  gameId: ObjectId,     // ref → games
-  moveNumber: number,   // half-move (ply) count, starts at 1
-  from: string,         // e.g. "e2"
-  to: string,           // e.g. "e4"
-  san: string,          // standard algebraic notation, e.g. "e4"
-  fenAfter: string,     // board position after this move
+  gameId: ObjectId,   // ref → games
+  moveNumber: number, // half-move (ply) count, starts at 1
+  from: string,       // e.g. "e2"
+  to: string,         // e.g. "e4"
+  san: string,        // standard algebraic notation
+  fenAfter: string,   // board position after this move
   playedAt: Date
 }
 ```
-
-Moves are stored in a separate collection (not embedded in the game document) so that individual moves can be queried, paginated, or replayed efficiently regardless of game length.
 
 ---
 
 ## REST API
 
+All routes require a valid Auth0 JWT in the `Authorization: Bearer` header.
+
 ### `POST /games`
-Create a new game. Inserts a row into `games`.
+Create a new game.
 
 **Request:**
 ```json
 { "mode": "vs_computer", "computerLevel": 5 }
 ```
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `mode` | no | `"pvp"` (default) or `"vs_computer"` |
-| `computerLevel` | no | Integer 1–10. Default: `5`. Ignored when mode is `"pvp"` |
-
-**Response:**
+**Response `201`:**
 ```json
 {
   "gameId": "abc123",
@@ -168,122 +182,48 @@ Create a new game. Inserts a row into `games`.
 ---
 
 ### `GET /games`
-List all games (most recent first).
-
-**Response:**
-```json
-[
-  { "gameId": "abc123", "status": "checkmate", "createdAt": 1710000000, "moveCount": 42 },
-  { "gameId": "def456", "status": "active",    "createdAt": 1710001000, "moveCount": 5 }
-]
-```
+List the authenticated user's games, most recent first.
 
 ---
 
 ### `GET /games/:gameId`
-Get current game state plus full move history.
-
-**Response:**
-```json
-{
-  "gameId": "abc123",
-  "fen": "...",
-  "turn": "w",
-  "status": "active",
-  "moves": [
-    { "moveNumber": 1, "from": "e2", "to": "e4", "san": "e4", "fenAfter": "...", "playedAt": 1710000001 },
-    { "moveNumber": 2, "from": "e7", "to": "e5", "san": "e5", "fenAfter": "...", "playedAt": 1710000010 }
-  ]
-}
-```
-
-Status values: `active` | `check` | `checkmate` | `stalemate` | `draw` | `resigned`
+Get current game state plus full move history. Returns 404 if the game belongs to another user.
 
 ---
 
 ### `POST /games/:gameId/moves`
-Submit a move. Inserts a row into `moves` and updates `games`.
+Submit a player move.
 
-**Request:**
-```json
-{ "from": "e2", "to": "e4" }
-```
+**Request:** `{ "from": "e2", "to": "e4" }`
 
-**Response (success, pvp):**
-```json
-{
-  "fen": "...",
-  "turn": "b",
-  "status": "active",
-  "move": { "moveNumber": 1, "san": "e4", "fenAfter": "..." },
-  "computerMove": null
-}
-```
-
-**Response (success, vs_computer):**
-```json
-{
-  "fen": "...",
-  "turn": "w",
-  "status": "active",
-  "move": { "moveNumber": 1, "san": "e4", "fenAfter": "..." },
-  "computerMove": { "san": "e5", "from": "e7", "to": "e5" }
-}
-```
-`fen` reflects the position **after the computer has moved**. The board is always returned to the player's turn.
-
-**Response (invalid move):**
-```json
-{ "error": "Invalid move" }
-```
-HTTP 400
+**Response:** Updated FEN, status, the player's move, and (if vs_computer) the computer's reply move.
 
 ---
 
 ### `DELETE /games/:gameId`
-Resign a game. Updates `games.status` to `resigned`. Moves are retained.
+Resign the game. Sets `status` to `"resigned"`.
 
 ---
 
 ## Frontend Behaviour
 
-1. On load, show a list of existing games (from `GET /games`) plus a "New Game" button.
-2. New Game → show mode selection modal:
-   - **Two Players**: call `POST /games` with `mode: "pvp"`
-   - **vs Computer**: show a level picker (1–10) with a label (e.g. "Club Player"), then call `POST /games` with `mode: "vs_computer"` and `computerLevel`
-3. Render the board from the FEN string.
-4. User clicks a piece — highlight legal squares.
-5. User clicks a destination — call `POST /games/:gameId/moves`.
-6. Re-render board from returned FEN; update move history list.
-7. Display turn indicator and game status.
-8. On checkmate/stalemate, show result overlay with a "New Game" button.
-9. Clicking a past game from the list replays it (loads move history, board shows final position).
-
----
-
-## Running Locally
-
-```bash
-# Start MongoDB
-docker-compose up -d
-
-# Backend (port 3000)
-cd backend && npm install && npm run dev
-
-# Frontend (port 5173 or similar)
-cd frontend && npm install && npm run dev
-```
-
-The frontend dev server proxies `/games` requests to the backend to avoid CORS issues.
-
-`MONGODB_URI` defaults to `mongodb://localhost:27017/chess` and can be overridden via environment variable.
+1. On load → check Auth0 session
+   - Not authenticated → show login screen (hero image background, Google + email buttons)
+   - Authenticated → show app
+2. **Lobby**: welcome image shown until a game starts; sidebar lists the user's games (filtered to active by default)
+3. **New Game** button → mode selection modal → (if vs computer) level slider → start game
+4. **Board**: click a piece to highlight legal moves; click a destination to submit the move
+5. After each move the board re-renders from the returned FEN; move list updates
+6. Game over → overlay with "Quit" button → returns to lobby
+7. **Resign** button visible only during an active game; after resigning → "Quit" → lobby
+8. **Lobby** button in header → return to welcome screen at any time
+9. Promotion always auto-promotes to queen (no UI)
 
 ---
 
 ## Constraints
 
-- Two players share one browser (pass-and-play) — no multiplayer/sockets
-- No user accounts
-- No promotion UI (auto-promote to queen)
-- No draw offers — only stalemate/insufficient material detected automatically
-- MongoDB runs locally via Docker; data persists in a named volume
+- Two players share one browser (pass-and-play) — no real-time multiplayer
+- Promotion always defaults to queen
+- No draw offers — draws detected automatically (stalemate, insufficient material)
+- MongoDB hosted on Atlas; configure connection string in `backend/.env`
