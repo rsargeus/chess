@@ -1,15 +1,18 @@
 import express from 'express';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 import { connectDB } from './db';
 import gameRouter from './routes/game';
 import { jwtCheck } from './middleware/auth';
 import { initEngine, destroyEngine } from './stockfish';
+import { openApiSpec } from './openapi';
 
 const app = express();
 const PORT = process.env.PORT ?? 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
 app.use('/games', jwtCheck, gameRouter);
 
 async function start() {

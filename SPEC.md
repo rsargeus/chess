@@ -16,6 +16,7 @@ A browser-based chess game with a REST API backend, Auth0 authentication, Stockf
 - **Chess engine:** Stockfish via `stockfish` npm package (ASM.js build, runs as a child process)
 - **Database:** MongoDB Atlas via `mongoose`
 - **Auth:** `express-oauth2-jwt-bearer` (validates Auth0 JWTs on all `/games` routes)
+- **API docs:** OpenAPI 3.0 spec (`backend/src/openapi.ts`) served as Swagger UI at `/api-docs`
 
 ### Frontend
 - **Plain HTML + CSS + TypeScript** (no framework)
@@ -42,6 +43,7 @@ chess/
 │   │   ├── routes/
 │   │   │   └── game.ts           # All /games routes
 │   │   ├── gameStore.ts          # DB-backed game state logic
+│   │   ├── openapi.ts            # OpenAPI 3.0 spec (served at /api-docs)
 │   │   └── stockfish.ts          # Stockfish child process wrapper
 │   ├── package.json
 │   └── tsconfig.json
@@ -152,6 +154,14 @@ Levels 1–9 use `UCI_LimitStrength` + `UCI_Elo`. Level 10 disables strength lim
   playedAt: Date
 }
 ```
+
+---
+
+## API Documentation
+
+The backend serves an interactive Swagger UI at **`http://localhost:3000/api-docs`**.
+
+The OpenAPI 3.0 spec is defined in `backend/src/openapi.ts`. It documents all endpoints, request/response schemas, and the JWT bearer security scheme. You can use the Swagger UI "Authorize" button to paste a token and execute live requests.
 
 ---
 
