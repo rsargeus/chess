@@ -21,11 +21,6 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
       usePkceWithAuthorizationCodeGrant: true,
     },
   },
-  customCss: `
-    .swagger-ui .auth-container .wrapper:has(label[for="client_secret"]) { display: none; }
-    .swagger-ui .auth-container .wrapper:has(label[for="scopes"]) { display: none; }
-    .swagger-ui .scopes { display: none; }
-  `,
 };
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
 app.use('/games', jwtCheck, gameRouter);
