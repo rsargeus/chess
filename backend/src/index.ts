@@ -3,6 +3,7 @@ import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import { connectDB } from './db';
 import gameRouter from './routes/game';
+import authRouter from './routes/auth';
 import { jwtCheck } from './middleware/auth';
 import { initEngine, destroyEngine } from './stockfish';
 import { openApiSpec } from './openapi';
@@ -12,20 +13,8 @@ const PORT = process.env.PORT ?? 3000;
 
 app.use(cors());
 app.use(express.json());
-const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
-  swaggerOptions: {
-    oauth2RedirectUrl: `http://localhost:${PORT}/api-docs/oauth2-redirect.html`,
-    initOAuth: {
-      clientId: process.env.AUTH0_CLIENT_ID,
-      additionalQueryStringParams: {
-        audience: process.env.AUTH0_AUDIENCE,
-        nonce: 'swagger',
-      },
-      usePkceWithAuthorizationCodeGrant: true,
-    },
-  },
-};
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec));
+app.use('/auth', authRouter);
 app.use('/games', jwtCheck, gameRouter);
 
 async function start() {
