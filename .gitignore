@@ -1,5 +1,7 @@
 node_modules/
 dist/
+html/
+coverage/
 .env
 *.map
 .DS_Store
