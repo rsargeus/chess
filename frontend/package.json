@@ -3,12 +3,18 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "node scripts/dev.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.0",
     "chess.js": "^1.0.0",
     "dotenv": "^17.3.1",
-    "esbuild": "^0.19.0"
+    "esbuild": "^0.19.0",
+    "jsdom": "^29.0.1",
+    "vitest": "^4.1.0"
   },
   "dependencies": {
     "@auth0/auth0-spa-js": "^2.18.0"

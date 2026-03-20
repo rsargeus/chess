@@ -43,8 +43,14 @@ chess/
 │   │   ├── routes/
 │   │   │   └── game.ts           # All /games routes
 │   │   ├── gameStore.ts          # DB-backed game state logic
+│   │   ├── app.ts                # Express app (no server startup — importable in tests)
 │   │   ├── openapi.ts            # OpenAPI 3.0 spec (served at /api-docs)
-│   │   └── stockfish.ts          # Stockfish child process wrapper
+│   │   ├── stockfish.ts          # Stockfish child process wrapper
+│   │   └── __tests__/
+│   │       ├── setup.ts          # MongoDB memory server setup
+│   │       ├── gameStore.test.ts # Unit tests for game logic
+│   │       └── routes/
+│   │           └── game.test.ts  # Integration tests for HTTP endpoints
 │   ├── package.json
 │   └── tsconfig.json
 ├── frontend/
@@ -58,7 +64,9 @@ chess/
 │   │   ├── api.ts                # REST client (attaches JWT to every request)
 │   │   ├── auth.ts               # Auth0 SPA client wrapper
 │   │   ├── chess-hero.png        # Login page background image
-│   │   └── chess-welcome.png     # Lobby welcome image
+│   │   ├── chess-welcome.png     # Lobby welcome image
+│   │   └── __tests__/
+│   │       └── api.test.ts       # Unit tests for REST client
 │   ├── package.json
 │   └── tsconfig.json
 ├── .gitignore
@@ -228,6 +236,62 @@ Resign the game. Sets `status` to `"resigned"`.
 7. **Resign** button visible only during an active game; after resigning → "Quit" → lobby
 8. **Lobby** button in header → return to welcome screen at any time
 9. Promotion always auto-promotes to queen (no UI)
+
+---
+
+## Testing
+
+### Backend — Vitest + Supertest + mongodb-memory-server
+
+| Layer | File | What it tests |
+|-------|------|---------------|
+| Unit | `src/__tests__/gameStore.test.ts` | `createGame`, `listGames`, `getGame`, `applyMove`, `resignGame` |
+| Integration | `src/__tests__/routes/game.test.ts` | All HTTP endpoints via Supertest |
+
+**Setup (`src/__tests__/setup.ts`):** Starts an in-memory MongoDB before each suite, clears all collections between tests, and tears down after.
+
+**Mocks:**
+- `jwtCheck` middleware replaced with a no-op that injects `req.auth = { payload: { sub: 'test-user' } }`
+- `getBestMove` (Stockfish) mocked to return `e7e5` instantly — tests are fast and deterministic
+
+```bash
+cd backend && npm test               # run once
+cd backend && npm run test:watch     # watch mode
+cd backend && npm run test:coverage  # with coverage report
+```
+
+### Frontend — Vitest + jsdom
+
+| File | What it tests |
+|------|---------------|
+| `src/__tests__/api.test.ts` | All API client functions: correct HTTP method, URL, headers, body, error handling |
+
+**Mocks:**
+- `getToken` (Auth0) mocked to return `'mock-token'`
+- `global.fetch` replaced with a `vi.fn()`
+
+```bash
+cd frontend && npm test              # run once
+cd frontend && npm run test:watch    # watch mode
+cd frontend && npm run test:coverage # with coverage report
+```
+
+### HTML Report
+
+Both backend and frontend support generating an interactive HTML test report:
+
+```bash
+cd backend  && npm test -- --reporter=html
+cd frontend && npm test -- --reporter=html
+```
+
+The report is written to an `html/` folder. To view it:
+
+```bash
+cd backend && npx vite preview --outDir html --port 4173
+```
+
+Then open `http://localhost:4173` in the browser. The report shows all test suites, individual test names, pass/fail status, and execution time. You can drill into each test for details.
 
 ---
 
