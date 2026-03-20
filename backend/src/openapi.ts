@@ -9,11 +9,15 @@ export const openApiSpec = {
   servers: [{ url: 'http://localhost:3000' }],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
-        description: 'Paste the access_token returned by POST /auth/token',
+      auth0: {
+        type: 'oauth2',
+        flows: {
+          authorizationCode: {
+            authorizationUrl: `https://${process.env.AUTH0_DOMAIN}/authorize`,
+            tokenUrl: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+            scopes: {},
+          },
+        },
       },
     },
     schemas: {
@@ -72,47 +76,8 @@ export const openApiSpec = {
       },
     },
   },
-  security: [{ bearerAuth: [] }],
+  security: [{ auth0: [] }],
   paths: {
-    '/auth/token': {
-      post: {
-        summary: 'Get access token',
-        description: 'Exchange email + password for an Auth0 JWT. Copy the returned `access_token` and paste it into the Authorize button above.',
-        security: [],
-        requestBody: {
-          required: true,
-          content: {
-            'application/json': {
-              schema: {
-                type: 'object',
-                required: ['email', 'password'],
-                properties: {
-                  email:    { type: 'string', format: 'email', example: 'user@example.com' },
-                  password: { type: 'string', format: 'password' },
-                },
-              },
-            },
-          },
-        },
-        responses: {
-          '200': {
-            description: 'JWT access token',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    access_token: { type: 'string' },
-                    token_type:   { type: 'string', example: 'Bearer' },
-                  },
-                },
-              },
-            },
-          },
-          '401': { description: 'Invalid credentials' },
-        },
-      },
-    },
     '/games': {
       get: {
         summary: 'List games',
