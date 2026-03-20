@@ -9,10 +9,15 @@ export const openApiSpec = {
   servers: [{ url: 'http://localhost:3000' }],
   components: {
     securitySchemes: {
-      bearerAuth: {
-        type: 'http',
-        scheme: 'bearer',
-        bearerFormat: 'JWT',
+      auth0: {
+        type: 'oauth2',
+        flows: {
+          authorizationCode: {
+            authorizationUrl: `https://${process.env.AUTH0_DOMAIN}/authorize`,
+            tokenUrl: `https://${process.env.AUTH0_DOMAIN}/oauth/token`,
+            scopes: { openid: 'OpenID Connect', profile: 'Profile', email: 'Email' },
+          },
+        },
       },
     },
     schemas: {
@@ -71,7 +76,7 @@ export const openApiSpec = {
       },
     },
   },
-  security: [{ bearerAuth: [] }],
+  security: [{ auth0: [] }],
   paths: {
     '/games': {
       get: {
