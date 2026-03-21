@@ -14,6 +14,8 @@ export async function initAuth(): Promise<void> {
       audience: __AUTH0_AUDIENCE__,
       redirect_uri: window.location.origin,
     },
+    useRefreshTokens: true,
+    cacheLocation: 'localstorage',
   });
 
   if (window.location.search.includes('code=') || window.location.search.includes('error=')) {
