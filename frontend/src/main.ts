@@ -491,9 +491,25 @@ async function showApp(paymentSuccess = false): Promise<void> {
   if (paymentSuccess) {
     const banner = document.getElementById('payment-banner')!;
     banner.classList.remove('hidden');
+    if (!roles.includes('premium')) {
+      await pollForPremium();
+    }
     setTimeout(() => banner.classList.add('hidden'), 5000);
   }
   refreshGameList();
+}
+
+async function pollForPremium(): Promise<void> {
+  const maxAttempts = 10;
+  const intervalMs = 2000;
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, intervalMs));
+    const roles = await getRoles();
+    if (roles.includes('premium')) {
+      premiumBadgeEl.classList.remove('hidden');
+      return;
+    }
+  }
 }
 
 boot();
