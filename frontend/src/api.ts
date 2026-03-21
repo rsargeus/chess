@@ -1,6 +1,8 @@
 import { getToken } from './auth';
 
-const BASE = '/games';
+declare const __BACKEND_URL__: string;
+const API_BASE = __BACKEND_URL__ || '';
+const BASE = `${API_BASE}/games`;
 
 async function authHeaders(): Promise<Record<string, string>> {
   const token = await getToken();
@@ -83,7 +85,7 @@ export async function resignGame(gameId: string): Promise<void> {
 }
 
 export async function createCheckoutSession(): Promise<string> {
-  const res = await fetch('/checkout', {
+  const res = await fetch(`${API_BASE}/checkout`, {
     method: 'POST',
     headers: await authHeaders(),
   });
