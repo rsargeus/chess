@@ -9,7 +9,8 @@ import { openApiSpec } from './openapi';
 
 export const app = express();
 
-app.use(cors());
+const corsOrigin = process.env.FRONTEND_URL ?? '*';
+app.use(cors({ origin: corsOrigin }));
 
 // Webhook must use raw body BEFORE express.json() for Stripe signature verification
 app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRouter);

@@ -295,6 +295,53 @@ Then open `http://localhost:4173` in the browser. The report shows all test suit
 
 ---
 
+## Deployment
+
+### Frontend — Cloudflare Pages
+
+The frontend is a static site (HTML + bundled JS) deployed to **Cloudflare Pages** via Git integration.
+
+- **Build command:** `node scripts/build.js`
+- **Output directory:** `dist/`
+- **Root directory:** `frontend/`
+- **Environment variables** (set in Cloudflare Pages dashboard):
+  - `AUTH0_DOMAIN`
+  - `AUTH0_CLIENT_ID`
+  - `AUTH0_AUDIENCE`
+
+The `build.js` script reads these at bundle time via `process.env` and injects them as compile-time constants.
+
+### Backend — Render
+
+The backend is a long-running Node.js service deployed on **Render** (Web Service).
+
+- **Build command:** `npm install && npm run build`
+- **Start command:** `npm start`
+- **Environment:** Node
+- **Environment variables** (set in Render dashboard):
+  - `MONGODB_URI`
+  - `AUTH0_DOMAIN`
+  - `AUTH0_AUDIENCE`
+  - `AUTH0_MANAGEMENT_CLIENT_ID`
+  - `AUTH0_MANAGEMENT_CLIENT_SECRET`
+  - `AUTH0_PREMIUM_ROLE_ID`
+  - `STRIPE_SECRET_KEY`
+  - `STRIPE_WEBHOOK_SECRET`
+  - `STRIPE_PRICE_ID`
+  - `FRONTEND_URL` (production Cloudflare Pages URL)
+
+> **Note:** Stockfish runs as a persistent child process. Render must be configured with **min instances = 1** to avoid cold starts killing the engine mid-game. Free tier spins down after inactivity — use a paid plan or Starter tier to keep it alive.
+
+### CORS
+
+In production the backend must restrict CORS to the Cloudflare Pages domain. Update `app.ts` to pass the `FRONTEND_URL` environment variable to the `cors()` origin option.
+
+### Stripe webhooks
+
+In production, point the Stripe webhook endpoint to `https://<render-domain>/webhooks/stripe`. The Stripe CLI tunnel is only needed locally.
+
+---
+
 ## Constraints
 
 - Two players share one browser (pass-and-play) — no real-time multiplayer
