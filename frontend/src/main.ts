@@ -413,7 +413,7 @@ async function refreshGameList(): Promise<void> {
       ? `vs CPU Lvl ${g.computerLevel}`
       : '2P';
     li.textContent = `${date} · ${modeLabel} · ${g.status} (${g.moveCount})`;
-    li.addEventListener('click', () => loadGame(g.gameId));
+    li.addEventListener('click', () => { loadGame(g.gameId); closeSidebar(); });
     gameListEl.appendChild(li);
   }
 }
@@ -443,6 +443,20 @@ navBackBtn.classList.add('hidden');
 navFwdBtn.classList.add('hidden');
 navBackBtn.addEventListener('click', () => navigateTo(viewIndex - 1));
 navFwdBtn.addEventListener('click', () => navigateTo(viewIndex + 1));
+
+// Mobile sidebar toggle
+const sidebarEl = document.querySelector('.sidebar')!;
+const sidebarOverlayEl = document.getElementById('sidebar-overlay')!;
+const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn')!;
+function closeSidebar() {
+  sidebarEl.classList.remove('open');
+  sidebarOverlayEl.classList.remove('open');
+}
+sidebarToggleBtn.addEventListener('click', () => {
+  const isOpen = sidebarEl.classList.toggle('open');
+  sidebarOverlayEl.classList.toggle('open', isOpen);
+});
+sidebarOverlayEl.addEventListener('click', closeSidebar);
 loginGoogleBtn.addEventListener('click', () => loginWithGoogle());
 loginEmailBtn.addEventListener('click', () => loginWithEmailPassword());
 logoutBtn.addEventListener('click', () => logout());

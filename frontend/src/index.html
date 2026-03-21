@@ -498,6 +498,100 @@
     #logout-btn:hover { color: #e8d5b0; border-color: #9a8060; }
     .premium-badge { color: #e2b96f; font-size: 1.1rem; }
 
+    /* Sidebar toggle button (mobile only) */
+    @media (min-width: 769px) {
+      #sidebar-toggle-btn { display: none !important; }
+    }
+    #sidebar-toggle-btn {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: 1px solid #4a2e0e;
+      color: #e8d5b0;
+      padding: 5px 9px;
+      border-radius: 5px;
+      font-size: 1rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    /* Sidebar overlay (mobile only) */
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 49;
+    }
+    #sidebar-overlay.open { display: block; }
+
+    /* ── Mobile styles ── */
+    @media (max-width: 768px) {
+      header {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+      header h1 { font-size: 1.1rem; }
+      #user-name { display: none; }
+      #sidebar-toggle-btn { display: flex; }
+
+      .layout {
+        flex-direction: column;
+        overflow: auto;
+      }
+
+      /* Sidebar becomes a slide-in overlay */
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: -100%;
+        width: 280px;
+        height: 100%;
+        z-index: 50;
+        transition: left 0.25s ease;
+        border-right: 1px solid #4a2e0e;
+      }
+      .sidebar.open { left: 0; }
+
+      /* Main stacks vertically */
+      .main {
+        flex-direction: column;
+        align-items: center;
+        padding: 12px;
+        gap: 16px;
+        overflow: auto;
+      }
+
+      /* Board fills screen width but never taller than 440px on mobile */
+      .board-wrap { flex-shrink: 0; }
+      .board {
+        width: min(90vw, 440px);
+        height: min(90vw, 440px);
+      }
+      .board-wrap.empty::before {
+        width: min(90vw, 440px);
+        height: min(90vw, 440px);
+      }
+
+      /* Panel goes full width below board */
+      .panel {
+        width: 100%;
+        max-width: 560px;
+      }
+      #move-list { max-height: 160px; }
+
+      /* Modals fit narrow screens */
+      .modal {
+        padding: 24px 20px;
+        min-width: 0;
+        width: 90vw;
+      }
+      .modal-options { flex-direction: column; }
+      .btn-mode { flex-direction: row; gap: 10px; padding: 12px 16px; }
+      .btn-mode .mode-icon { font-size: 1.4rem; }
+    }
+
     /* Captured pieces */
     .captured-pieces {
       background: #231508;
@@ -566,8 +660,10 @@
       <span id="user-name"></span>
       <button id="logout-btn">Sign out</button>
     </div>
+    <button id="sidebar-toggle-btn">&#9776;</button>
   </header>
 
+  <div id="sidebar-overlay"></div>
   <div class="layout">
     <aside class="sidebar">
       <div class="sidebar-header">
