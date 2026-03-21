@@ -101,7 +101,9 @@ export async function applyMove(gameId: string, from: string, to: string, userId
   if (!result) return { error: 'Invalid move', status: 400 };
 
   let moveCount = await Move.countDocuments({ gameId: game._id });
-  await saveMove(game._id, ++moveCount, from, to, result.san, chess.fen());
+  const playerMoveNumber = ++moveCount;
+  const playerFenAfter = chess.fen();
+  await saveMove(game._id, playerMoveNumber, from, to, result.san, playerFenAfter);
 
   let status = deriveStatus(chess);
   let computerMove: { san: string; from: string; to: string } | null = null;
@@ -135,7 +137,7 @@ export async function applyMove(gameId: string, from: string, to: string, userId
     fen: chess.fen(),
     turn: chess.turn(),
     status,
-    move: { moveNumber: moveCount, san: result.san, fenAfter: chess.fen() },
+    move: { moveNumber: playerMoveNumber, san: result.san, fenAfter: playerFenAfter },
     computerMove,
   };
 }
