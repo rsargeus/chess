@@ -346,19 +346,19 @@ function updateCapturedPieces(fen: string): void {
 
   // White captures = missing black pieces (lowercase)
   const capturedByWhite = PIECE_ORDER.map(p => p.toLowerCase())
-    .flatMap(p => Array((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)).fill(PIECE_SYMBOLS[p]))
+    .flatMap(p => Array(Math.max(0, (START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0))).fill(PIECE_SYMBOLS[p]))
     .filter(Boolean);
 
   // Black captures = missing white pieces (uppercase)
   const capturedByBlack = PIECE_ORDER
-    .flatMap(p => Array((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)).fill(PIECE_SYMBOLS[p]))
+    .flatMap(p => Array(Math.max(0, (START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0))).fill(PIECE_SYMBOLS[p]))
     .filter(Boolean);
 
   // Calculate point totals
   const scoreWhite = PIECE_ORDER.map(p => p.toLowerCase())
-    .reduce((sum, p) => sum + ((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p.toUpperCase()], 0);
+    .reduce((sum, p) => sum + Math.max(0, (START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p.toUpperCase()], 0);
   const scoreBlack = PIECE_ORDER
-    .reduce((sum, p) => sum + ((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p], 0);
+    .reduce((sum, p) => sum + Math.max(0, (START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p], 0);
 
   const diff = scoreWhite - scoreBlack;
   const whiteScore = diff > 0 ? `<span class="captured-score">+${diff}</span>` : '';
