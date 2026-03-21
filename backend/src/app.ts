@@ -19,7 +19,7 @@ app.use(express.json());
 
 const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
   swaggerOptions: {
-    oauth2RedirectUrl: 'http://localhost:3000/api-docs/oauth2-redirect.html',
+    oauth2RedirectUrl: `${process.env.BACKEND_URL ?? 'http://localhost:3000'}/api-docs/oauth2-redirect.html`,
     oauth: {
       clientId: process.env.AUTH0_CLIENT_ID,
       additionalQueryStringParams: { audience: process.env.AUTH0_AUDIENCE },
