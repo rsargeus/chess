@@ -9,6 +9,12 @@ function userId(req: Request): string {
 
 router.post('/', async (req: Request, res: Response) => {
   const mode = req.body.mode === 'vs_computer' ? 'vs_computer' : 'pvp';
+  if (mode === 'vs_computer') {
+    const roles = ((req.auth!.payload['https://chess-api/roles'] as string[]) ?? []).map(r => r.toLowerCase());
+    if (!roles.includes('premium')) {
+      return res.status(403).json({ error: 'Premium membership required to play vs Computer' });
+    }
+  }
   const level = typeof req.body.computerLevel === 'number' ? req.body.computerLevel : null;
   const game = await store.createGame(userId(req), mode, level);
   res.status(201).json(game);

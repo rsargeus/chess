@@ -454,6 +454,25 @@
       background: #4a2e0e;
     }
 
+    /* Payment banner */
+    .payment-banner {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: #4a7c3f;
+      color: #fff;
+      text-align: center;
+      padding: 12px;
+      font-weight: 600;
+      z-index: 200;
+    }
+
+    /* Premium modal */
+    .premium-icon { font-size: 3rem; margin-bottom: 8px; }
+    .premium-desc { color: #9a8060; font-size: 0.9rem; margin: 8px 0 16px; text-align: center; line-height: 1.5; }
+    .premium-price { font-size: 2.5rem; font-weight: 700; color: #e2b96f; }
+    .premium-once { font-size: 0.8rem; color: #9a8060; margin-bottom: 20px; }
+    .premium-pay-btn { width: 100%; padding: 12px; font-size: 1rem; }
+
     /* App wrapper */
     #app { display: contents; }
     #app.hidden { display: none; }
@@ -477,6 +496,33 @@
       cursor: pointer;
     }
     #logout-btn:hover { color: #e8d5b0; border-color: #9a8060; }
+    .premium-badge { color: #e2b96f; font-size: 1.1rem; }
+
+    /* Captured pieces */
+    .captured-pieces {
+      background: #231508;
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-size: 0.8rem;
+    }
+    .captured-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #9a8060;
+      margin-bottom: 4px;
+    }
+    .captured-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1px;
+      min-height: 1.4em;
+      line-height: 1;
+    }
+    .captured-row + .captured-row { margin-top: 6px; }
+    .captured-piece {
+      font-size: 1.05rem;
+    }
   </style>
 </head>
 <body>
@@ -509,6 +555,7 @@
     <button id="new-game-btn" class="btn btn-primary">New Game</button>
     <div class="header-spacer"></div>
     <div class="user-info">
+      <span id="premium-badge" class="premium-badge hidden" title="Premium member">♛</span>
       <span id="user-name"></span>
       <button id="logout-btn">Sign out</button>
     </div>
@@ -537,6 +584,11 @@
           <button id="nav-back-btn" class="btn btn-secondary hidden">&#8592;</button>
           <button id="nav-fwd-btn" class="btn btn-secondary hidden">&#8594;</button>
         </div>
+        <div id="captured-pieces" class="captured-pieces hidden">
+          <div class="captured-label">Captured pieces</div>
+          <div id="captured-by-white" class="captured-row"></div>
+          <div id="captured-by-black" class="captured-row"></div>
+        </div>
       </div>
     </main>
   </div>
@@ -562,6 +614,24 @@
         </button>
       </div>
       <button id="mode-cancel-btn" class="modal-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Payment success banner -->
+  <div id="payment-banner" class="payment-banner hidden">
+    ✓ Payment confirmed — welcome as a Premium member!
+  </div>
+
+  <!-- Premium payment modal -->
+  <div id="payment-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="premium-icon">♛</div>
+      <h2>Premium Membership</h2>
+      <p class="premium-desc">Unlock the ability to play against the computer at all levels — from Beginner to Grandmaster.</p>
+      <div class="premium-price">20 kr</div>
+      <p class="premium-once">One-time payment</p>
+      <button id="payment-pay-btn" class="btn btn-primary premium-pay-btn">Pay 20 kr</button>
+      <button id="payment-cancel-btn" class="modal-cancel">Cancel</button>
     </div>
   </div>
 

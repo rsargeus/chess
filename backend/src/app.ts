@@ -2,12 +2,18 @@ import express from 'express';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
 import gameRouter from './routes/game';
+import checkoutRouter from './routes/checkout';
+import webhookRouter from './routes/webhook';
 import { jwtCheck } from './middleware/auth';
 import { openApiSpec } from './openapi';
 
 export const app = express();
 
 app.use(cors());
+
+// Webhook must use raw body BEFORE express.json() for Stripe signature verification
+app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRouter);
+
 app.use(express.json());
 
 const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
@@ -22,4 +28,5 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);

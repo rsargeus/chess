@@ -17,6 +17,7 @@
     "express-oauth2-jwt-bearer": "^1.7.4",
     "mongoose": "^8.0.0",
     "stockfish": "^18.0.5",
+    "stripe": "^20.4.1",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^9.0.0"
   },

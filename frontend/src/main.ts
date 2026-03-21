@@ -1,6 +1,6 @@
 import { Board } from './board';
 import * as api from './api';
-import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
+import { initAuth, isAuthenticated, getUser, getRoles, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
 import { playMove, playCapture, playCheck, playGameOver } from './sound';
 
 const LEVELS: Record<number, string> = {
@@ -31,6 +31,7 @@ const loginGoogleBtn = document.getElementById('login-google-btn')!;
 const loginEmailBtn  = document.getElementById('login-email-btn')!;
 const userNameEl     = document.getElementById('user-name')!;
 const logoutBtn      = document.getElementById('logout-btn')!;
+const premiumBadgeEl = document.getElementById('premium-badge')!;
 
 const boardEl        = document.getElementById('board')!;
 const statusEl       = document.getElementById('status')!;
@@ -40,6 +41,10 @@ const newGameBtn     = document.getElementById('new-game-btn')!;
 const resignBtn      = document.getElementById('resign-btn')!;
 const navBackBtn     = document.getElementById('nav-back-btn')!;
 const navFwdBtn      = document.getElementById('nav-fwd-btn')!;
+const capturedPiecesEl  = document.getElementById('captured-pieces')!;
+const capturedByWhiteEl = document.getElementById('captured-by-white')!;
+const capturedByBlackEl = document.getElementById('captured-by-black')!;
+
 const overlayEl      = document.getElementById('overlay')!;
 const overlayMsg     = document.getElementById('overlay-msg')!;
 const overlayNewGame = document.getElementById('overlay-new-game')!;
@@ -49,6 +54,11 @@ const modeModalEl = document.getElementById('mode-modal')!;
 const modePvpBtn = document.getElementById('mode-pvp-btn')!;
 const modeComputerBtn = document.getElementById('mode-computer-btn')!;
 const modeCancelBtn = document.getElementById('mode-cancel-btn')!;
+
+// Payment modal elements
+const paymentModalEl = document.getElementById('payment-modal')!;
+const paymentPayBtn = document.getElementById('payment-pay-btn')!;
+const paymentCancelBtn = document.getElementById('payment-cancel-btn')!;
 
 // Level modal elements
 const levelModalEl = document.getElementById('level-modal')!;
@@ -82,6 +92,32 @@ function showModeModal(): Promise<'pvp' | 'computer' | null> {
     modePvpBtn.addEventListener('click', onPvp);
     modeComputerBtn.addEventListener('click', onComputer);
     modeCancelBtn.addEventListener('click', onCancel);
+  });
+}
+
+function showPaymentModal(): Promise<boolean> {
+  return new Promise((resolve) => {
+    paymentModalEl.classList.remove('hidden');
+    const cleanup = (r: boolean) => {
+      paymentModalEl.classList.add('hidden');
+      paymentPayBtn.removeEventListener('click', onPay);
+      paymentCancelBtn.removeEventListener('click', onCancel);
+      resolve(r);
+    };
+    const onPay = async () => {
+      paymentPayBtn.textContent = 'Loading…';
+      paymentPayBtn.setAttribute('disabled', 'true');
+      try {
+        const url = await api.createCheckoutSession();
+        window.location.href = url;
+      } catch {
+        paymentPayBtn.textContent = 'Pay 20 kr';
+        paymentPayBtn.removeAttribute('disabled');
+      }
+    };
+    const onCancel = () => cleanup(false);
+    paymentPayBtn.addEventListener('click', onPay);
+    paymentCancelBtn.addEventListener('click', onCancel);
   });
 }
 
@@ -119,7 +155,14 @@ async function startNewGame(): Promise<void> {
     return;
   }
 
-  // vs computer — pick level
+  // vs computer — check premium membership
+  const roles = await getRoles();
+  if (!roles.includes('premium')) {
+    await showPaymentModal();
+    return;
+  }
+
+  // pick level
   const level = await showLevelModal();
   if (level === -1 || level === null) {
     // -1 = cancel, null = back → re-show mode modal
@@ -147,6 +190,7 @@ function beginGame(state: api.GameState): void {
   navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel);
   renderMoveList([]);
+  updateCapturedPieces(state.fen);
   refreshGameList();
 }
 
@@ -173,6 +217,7 @@ async function loadGame(gameId: string): Promise<void> {
   navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel);
   renderMoveList(state.moves);
+  updateCapturedPieces(state.fen);
 }
 
 async function handleMove(from: string, to: string): Promise<void> {
@@ -197,6 +242,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     }
 
     board!.setFen(result.fen, active);
+    updateCapturedPieces(result.fen);
 
     const state = await api.getGame(currentGameId);
     gameIsActive = active;
@@ -255,6 +301,7 @@ function navigateTo(index: number): void {
   board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive);
   updateNavButtons();
   highlightMoveInList(viewIndex - 1); // viewIndex 0 = before any moves
+  updateCapturedPieces(moveHistory[viewIndex]);
 }
 
 function highlightMoveInList(moveIdx: number): void {
@@ -282,6 +329,37 @@ function renderMoveList(moves: api.MoveRecord[]): void {
   moveListEl.scrollTop = moveListEl.scrollHeight;
 }
 
+const PIECE_SYMBOLS: Record<string, string> = {
+  P: '♙', N: '♘', B: '♗', R: '♖', Q: '♕',
+  p: '♟', n: '♞', b: '♝', r: '♜', q: '♛',
+};
+const PIECE_ORDER = ['Q', 'R', 'B', 'N', 'P'];
+const START_COUNTS: Record<string, number> = { P: 8, N: 2, B: 2, R: 2, Q: 1, p: 8, n: 2, b: 2, r: 2, q: 1 };
+
+function updateCapturedPieces(fen: string): void {
+  const boardFen = fen.split(' ')[0];
+  const onBoard: Record<string, number> = {};
+  for (const ch of boardFen) {
+    if (/[pnbrqkPNBRQK]/.test(ch)) onBoard[ch] = (onBoard[ch] ?? 0) + 1;
+  }
+
+  // White captures = missing black pieces (lowercase)
+  const capturedByWhite = PIECE_ORDER.map(p => p.toLowerCase())
+    .flatMap(p => Array((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)).fill(PIECE_SYMBOLS[p]))
+    .filter(Boolean);
+
+  // Black captures = missing white pieces (uppercase)
+  const capturedByBlack = PIECE_ORDER
+    .flatMap(p => Array((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)).fill(PIECE_SYMBOLS[p]))
+    .filter(Boolean);
+
+  capturedByWhiteEl.innerHTML = capturedByWhite.map(s => `<span class="captured-piece">${s}</span>`).join('');
+  capturedByBlackEl.innerHTML = capturedByBlack.map(s => `<span class="captured-piece">${s}</span>`).join('');
+
+  const hasAny = capturedByWhite.length > 0 || capturedByBlack.length > 0;
+  capturedPiecesEl.classList.toggle('hidden', !hasAny);
+}
+
 function showOverlay(status: string): void {
   const messages: Record<string, string> = {
     checkmate: 'Checkmate!',
@@ -307,6 +385,7 @@ function returnToStart(): void {
   statusEl.textContent = '';
   moveListEl.innerHTML = '';
   moveListEl.classList.add('hidden');
+  capturedPiecesEl.classList.add('hidden');
 }
 
 async function refreshGameList(): Promise<void> {
@@ -361,7 +440,12 @@ async function boot(): Promise<void> {
   try {
     await initAuth();
     if (await isAuthenticated()) {
-      showApp();
+      const params = new URLSearchParams(window.location.search);
+      const paymentSuccess = params.get('payment') === 'success';
+      if (paymentSuccess) {
+        history.replaceState({}, '', window.location.pathname);
+      }
+      showApp(paymentSuccess);
       return;
     }
   } catch (e) {
@@ -370,12 +454,19 @@ async function boot(): Promise<void> {
   loginScreenEl.classList.remove('hidden');
 }
 
-async function showApp(): Promise<void> {
+async function showApp(paymentSuccess = false): Promise<void> {
   loginScreenEl.classList.add('hidden');
   appEl.classList.remove('hidden');
   const user = await getUser();
   if (user) {
     userNameEl.textContent = user.name ?? user.email ?? '';
+  }
+  const roles = await getRoles();
+  premiumBadgeEl.classList.toggle('hidden', !roles.includes('premium'));
+  if (paymentSuccess) {
+    const banner = document.getElementById('payment-banner')!;
+    banner.classList.remove('hidden');
+    setTimeout(() => banner.classList.add('hidden'), 5000);
   }
   refreshGameList();
 }

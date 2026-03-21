@@ -23,8 +23,8 @@ esbuild.context({
   ctx.watch();
 
   http.createServer((req, res) => {
-    // Proxy /games to backend
-    if (req.url.startsWith('/games')) {
+    // Proxy /games and /checkout to backend
+    if (req.url.startsWith('/games') || req.url.startsWith('/checkout')) {
       const options = {
         hostname: 'localhost',
         port: 3000,

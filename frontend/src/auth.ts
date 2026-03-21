@@ -35,6 +35,17 @@ export async function getToken(): Promise<string> {
   return _client.getTokenSilently();
 }
 
+export async function getRoles(): Promise<string[]> {
+  try {
+    const token = await _client!.getTokenSilently({ cacheMode: 'off' });
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+    const roles = (payload['https://chess-api/roles'] as string[]) ?? [];
+    return roles.map((r: string) => r.toLowerCase());
+  } catch {
+    return [];
+  }
+}
+
 export async function getUser(): Promise<User | undefined> {
   return _client?.getUser();
 }

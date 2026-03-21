@@ -81,3 +81,13 @@ export async function postMove(gameId: string, from: string, to: string): Promis
 export async function resignGame(gameId: string): Promise<void> {
   await fetch(`${BASE}/${gameId}`, { method: 'DELETE', headers: await authHeaders() });
 }
+
+export async function createCheckoutSession(): Promise<string> {
+  const res = await fetch('/checkout', {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  if (!res.ok) throw new Error('Failed to create checkout session');
+  const data = await res.json() as { url: string };
+  return data.url;
+}
