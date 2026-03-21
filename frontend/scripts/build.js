@@ -19,11 +19,19 @@ esbuild.buildSync({
 });
 
 // Copy static assets to dist/
-const staticFiles = ['src/index.html', 'src/chess-hero.png', 'src/chess-welcome.png', 'src/favicon.svg'];
-for (const file of staticFiles) {
+const imageFiles = ['src/chess-hero.png', 'src/chess-welcome.png', 'src/favicon.svg'];
+for (const file of imageFiles) {
   if (fs.existsSync(file)) {
     fs.copyFileSync(file, path.join('dist', path.basename(file)));
   }
 }
+
+// Copy index.html and rewrite asset paths for production
+let html = fs.readFileSync('src/index.html', 'utf8');
+html = html.replace('/dist/bundle.js', '/bundle.js');
+html = html.replace('/src/chess-hero.png', '/chess-hero.png');
+html = html.replace('/src/chess-welcome.png', '/chess-welcome.png');
+html = html.replace('/src/favicon.svg', '/favicon.svg');
+fs.writeFileSync('dist/index.html', html);
 
 console.log('Build complete → dist/');
