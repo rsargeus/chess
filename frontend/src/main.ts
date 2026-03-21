@@ -334,6 +334,7 @@ const PIECE_SYMBOLS: Record<string, string> = {
   p: '♟', n: '♞', b: '♝', r: '♜', q: '♛',
 };
 const PIECE_ORDER = ['Q', 'R', 'B', 'N', 'P'];
+const PIECE_VALUES: Record<string, number> = { Q: 9, R: 5, B: 3, N: 3, P: 1 };
 const START_COUNTS: Record<string, number> = { P: 8, N: 2, B: 2, R: 2, Q: 1, p: 8, n: 2, b: 2, r: 2, q: 1 };
 
 function updateCapturedPieces(fen: string): void {
@@ -353,8 +354,18 @@ function updateCapturedPieces(fen: string): void {
     .flatMap(p => Array((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)).fill(PIECE_SYMBOLS[p]))
     .filter(Boolean);
 
-  capturedByWhiteEl.innerHTML = capturedByWhite.map(s => `<span class="captured-piece">${s}</span>`).join('');
-  capturedByBlackEl.innerHTML = capturedByBlack.map(s => `<span class="captured-piece">${s}</span>`).join('');
+  // Calculate point totals
+  const scoreWhite = PIECE_ORDER.map(p => p.toLowerCase())
+    .reduce((sum, p) => sum + ((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p.toUpperCase()], 0);
+  const scoreBlack = PIECE_ORDER
+    .reduce((sum, p) => sum + ((START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p], 0);
+
+  const diff = scoreWhite - scoreBlack;
+  const whiteScore = diff > 0 ? `<span class="captured-score">+${diff}</span>` : '';
+  const blackScore = diff < 0 ? `<span class="captured-score">+${-diff}</span>` : '';
+
+  capturedByWhiteEl.innerHTML = capturedByWhite.map(s => `<span class="captured-piece">${s}</span>`).join('') + whiteScore;
+  capturedByBlackEl.innerHTML = capturedByBlack.map(s => `<span class="captured-piece">${s}</span>`).join('') + blackScore;
 
   const hasAny = capturedByWhite.length > 0 || capturedByBlack.length > 0;
   capturedPiecesEl.classList.toggle('hidden', !hasAny);
