@@ -62,6 +62,28 @@ describe('POST /games', () => {
     expect(res.body.mode).toBe('vs_computer');
     expect(res.body.computerLevel).toBe(4);
   });
+
+  it('returns 400 for vs_computer with computerLevel out of range', async () => {
+    authState.roles = ['Premium'];
+
+    const res = await request(app)
+      .post('/games')
+      .send({ mode: 'vs_computer', computerLevel: 99 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/computerLevel/i);
+  });
+
+  it('returns 400 for vs_computer with non-integer computerLevel', async () => {
+    authState.roles = ['Premium'];
+
+    const res = await request(app)
+      .post('/games')
+      .send({ mode: 'vs_computer', computerLevel: 3.5 });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/computerLevel/i);
+  });
 });
 
 describe('GET /games', () => {

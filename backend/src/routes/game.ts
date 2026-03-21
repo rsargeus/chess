@@ -15,7 +15,11 @@ router.post('/', async (req: Request, res: Response) => {
       return res.status(403).json({ error: 'Premium membership required to play vs Computer' });
     }
   }
-  const level = typeof req.body.computerLevel === 'number' ? req.body.computerLevel : null;
+  const rawLevel = req.body.computerLevel;
+  if (mode === 'vs_computer' && (typeof rawLevel !== 'number' || rawLevel < 1 || rawLevel > 10 || !Number.isInteger(rawLevel))) {
+    return res.status(400).json({ error: 'computerLevel must be an integer between 1 and 10' });
+  }
+  const level = mode === 'vs_computer' ? rawLevel : null;
   const game = await store.createGame(userId(req), mode, level);
   res.status(201).json(game);
 });
