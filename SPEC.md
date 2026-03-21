@@ -301,23 +301,26 @@ Then open `http://localhost:4173` in the browser. The report shows all test suit
 
 The frontend is a static site (HTML + bundled JS) deployed to **Cloudflare Pages** via Git integration.
 
-- **Build command:** `node scripts/build.js`
+- **URL:** https://chess-2h6.pages.dev
+- **Build command:** `npm install && node scripts/build.js`
 - **Output directory:** `dist/`
 - **Root directory:** `frontend/`
 - **Environment variables** (set in Cloudflare Pages dashboard):
   - `AUTH0_DOMAIN`
   - `AUTH0_CLIENT_ID`
   - `AUTH0_AUDIENCE`
+  - `BACKEND_URL` → `https://chess-backend-in1l.onrender.com`
 
-The `build.js` script reads these at bundle time via `process.env` and injects them as compile-time constants.
+The `build.js` script reads these at bundle time via `process.env` and injects them as compile-time constants. It also copies `index.html` and static assets to `dist/` with corrected asset paths.
 
 ### Backend — Render
 
-The backend is a long-running Node.js service deployed on **Render** (Web Service).
+The backend is a long-running Node.js service deployed on **Render** (Web Service, Free tier).
 
+- **URL:** https://chess-backend-in1l.onrender.com
 - **Build command:** `npm install && npm run build`
 - **Start command:** `npm start`
-- **Environment:** Node
+- **Region:** Frankfurt
 - **Environment variables** (set in Render dashboard):
   - `MONGODB_URI`
   - `AUTH0_DOMAIN`
@@ -328,17 +331,18 @@ The backend is a long-running Node.js service deployed on **Render** (Web Servic
   - `STRIPE_SECRET_KEY`
   - `STRIPE_WEBHOOK_SECRET`
   - `STRIPE_PRICE_ID`
-  - `FRONTEND_URL` (production Cloudflare Pages URL)
+  - `FRONTEND_URL` → `https://chess-2h6.pages.dev`
+  - `BACKEND_URL` → `https://chess-backend-in1l.onrender.com`
 
-> **Note:** Stockfish runs as a persistent child process. Render must be configured with **min instances = 1** to avoid cold starts killing the engine mid-game. Free tier spins down after inactivity — use a paid plan or Starter tier to keep it alive.
+> **Note:** Free tier spins down after 15 minutes of inactivity. The first request after inactivity may take 30–60 seconds. Upgrade to Starter ($7/month) for always-on availability.
 
 ### CORS
 
-In production the backend must restrict CORS to the Cloudflare Pages domain. Update `app.ts` to pass the `FRONTEND_URL` environment variable to the `cors()` origin option.
+CORS is restricted to `FRONTEND_URL` in production via the `cors({ origin })` option in `app.ts`. Falls back to `*` if `FRONTEND_URL` is not set (local dev).
 
 ### Stripe webhooks
 
-In production, point the Stripe webhook endpoint to `https://<render-domain>/webhooks/stripe`. The Stripe CLI tunnel is only needed locally.
+The production webhook endpoint is `https://chess-backend-in1l.onrender.com/webhooks/stripe`, configured in the Stripe dashboard to listen for `checkout.session.completed` events. The Stripe CLI tunnel is only needed for local development.
 
 ---
 
