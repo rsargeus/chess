@@ -1,11 +1,19 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { app } from '../../app';
 
-// Mock JWT middleware — sets a fixed userId on every request
+// Configurable auth state — tests can override roles as needed
+const authState = { roles: [] as string[] };
+
+// Mock JWT middleware — injects configurable roles into every request
 vi.mock('../../middleware/auth', () => ({
   jwtCheck: (req: any, _res: any, next: any) => {
-    req.auth = { payload: { sub: 'test-user' } };
+    req.auth = {
+      payload: {
+        sub: 'test-user',
+        'https://chess-api/roles': authState.roles,
+      },
+    };
     next();
   },
 }));
@@ -17,6 +25,10 @@ vi.mock('../../stockfish', () => ({
   initEngine: vi.fn(),
   destroyEngine: vi.fn(),
 }));
+
+beforeEach(() => {
+  authState.roles = [];
+});
 
 describe('POST /games', () => {
   it('creates a pvp game and returns 201', async () => {
@@ -30,7 +42,18 @@ describe('POST /games', () => {
     expect(res.body.mode).toBe('pvp');
   });
 
-  it('creates a vs_computer game with level', async () => {
+  it('returns 403 for vs_computer without premium role', async () => {
+    const res = await request(app)
+      .post('/games')
+      .send({ mode: 'vs_computer', computerLevel: 4 });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toMatch(/premium/i);
+  });
+
+  it('creates a vs_computer game with premium role', async () => {
+    authState.roles = ['Premium'];
+
     const res = await request(app)
       .post('/games')
       .send({ mode: 'vs_computer', computerLevel: 4 });
