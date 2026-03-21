@@ -1,5 +1,7 @@
 require('dotenv').config();
 const esbuild = require('esbuild');
+const fs = require('fs');
+const path = require('path');
 
 esbuild.buildSync({
   entryPoints: ['src/main.ts'],
@@ -15,4 +17,13 @@ esbuild.buildSync({
     '__BACKEND_URL__':      JSON.stringify(process.env.BACKEND_URL      ?? ''),
   },
 });
-console.log('Build complete → dist/bundle.js');
+
+// Copy static assets to dist/
+const staticFiles = ['src/index.html', 'src/chess-hero.png', 'src/chess-welcome.png', 'src/favicon.svg'];
+for (const file of staticFiles) {
+  if (fs.existsSync(file)) {
+    fs.copyFileSync(file, path.join('dist', path.basename(file)));
+  }
+}
+
+console.log('Build complete → dist/');
