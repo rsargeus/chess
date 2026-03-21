@@ -37,14 +37,24 @@ export async function getToken(): Promise<string> {
   return _client.getTokenSilently();
 }
 
+function parseRolesFromToken(token: string): string[] {
+  const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  const roles = (payload['https://chess-api/roles'] as string[]) ?? [];
+  return roles.map((r: string) => r.toLowerCase());
+}
+
 export async function getRoles(): Promise<string[]> {
   try {
     const token = await _client!.getTokenSilently({ cacheMode: 'off' });
-    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    const roles = (payload['https://chess-api/roles'] as string[]) ?? [];
-    return roles.map((r: string) => r.toLowerCase());
+    return parseRolesFromToken(token);
   } catch {
-    return [];
+    // cacheMode: 'off' may fail on Safari — fall back to cached token
+    try {
+      const token = await _client!.getTokenSilently();
+      return parseRolesFromToken(token);
+    } catch {
+      return [];
+    }
   }
 }
 
