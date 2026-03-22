@@ -20,6 +20,20 @@ async function getManagementToken(): Promise<string> {
   return tokenCache.access_token;
 }
 
+export async function getUserRoles(userId: string): Promise<string[]> {
+  const token = await getManagementToken();
+  const res = await fetch(
+    `https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}/roles`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(`Auth0 get roles failed: ${JSON.stringify(err)}`);
+  }
+  const roles = await res.json() as { name: string }[];
+  return roles.map(r => r.name.toLowerCase());
+}
+
 export async function assignPremiumRole(userId: string): Promise<void> {
   const token = await getManagementToken();
   const res = await fetch(

@@ -4,6 +4,7 @@ import swaggerUi from 'swagger-ui-express';
 import gameRouter from './routes/game';
 import checkoutRouter from './routes/checkout';
 import webhookRouter from './routes/webhook';
+import meRouter from './routes/me';
 import { jwtCheck } from './middleware/auth';
 import { openApiSpec } from './openapi';
 
@@ -29,5 +30,6 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+app.use('/me', jwtCheck, meRouter);
 app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);

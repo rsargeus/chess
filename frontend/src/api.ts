@@ -84,6 +84,12 @@ export async function resignGame(gameId: string): Promise<void> {
   await fetch(`${BASE}/${gameId}`, { method: 'DELETE', headers: await authHeaders() });
 }
 
+export async function getMe(): Promise<{ premium: boolean }> {
+  const res = await fetch(`${API_BASE}/me`, { headers: await authHeaders() });
+  if (!res.ok) throw new Error('Failed to fetch user info');
+  return res.json();
+}
+
 export async function createCheckoutSession(): Promise<string> {
   const res = await fetch(`${API_BASE}/checkout`, {
     method: 'POST',

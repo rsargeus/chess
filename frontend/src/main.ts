@@ -1,6 +1,6 @@
 import { Board } from './board';
 import * as api from './api';
-import { initAuth, isAuthenticated, getUser, getRoles, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
+import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
 import { playMove, playCapture, playCheck, playGameOver } from './sound';
 
 const LEVELS: Record<number, string> = {
@@ -156,8 +156,8 @@ async function startNewGame(): Promise<void> {
   }
 
   // vs computer — check premium membership
-  const roles = await getRoles();
-  if (!roles.includes('premium')) {
+  const me = await api.getMe();
+  if (!me.premium) {
     await showPaymentModal();
     return;
   }
@@ -486,12 +486,12 @@ async function showApp(paymentSuccess = false): Promise<void> {
   if (user) {
     userNameEl.textContent = user.name ?? user.email ?? '';
   }
-  const roles = await getRoles();
-  premiumBadgeEl.classList.toggle('hidden', !roles.includes('premium'));
+  const me = await api.getMe().catch(() => ({ premium: false }));
+  premiumBadgeEl.classList.toggle('hidden', !me.premium);
   if (paymentSuccess) {
     const banner = document.getElementById('payment-banner')!;
     banner.classList.remove('hidden');
-    if (!roles.includes('premium')) {
+    if (!me.premium) {
       await pollForPremium();
     }
     setTimeout(() => banner.classList.add('hidden'), 5000);
@@ -504,8 +504,8 @@ async function pollForPremium(): Promise<void> {
   const intervalMs = 2000;
   for (let i = 0; i < maxAttempts; i++) {
     await new Promise(r => setTimeout(r, intervalMs));
-    const roles = await getRoles();
-    if (roles.includes('premium')) {
+    const me = await api.getMe().catch(() => ({ premium: false }));
+    if (me.premium) {
       premiumBadgeEl.classList.remove('hidden');
       return;
     }
