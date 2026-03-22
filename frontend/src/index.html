@@ -715,8 +715,24 @@
           <span class="mode-icon">🤖</span>
           vs Computer
         </button>
+        <button id="mode-multiplayer-btn" class="btn-mode">
+          <span class="mode-icon">🌐</span>
+          Online
+        </button>
       </div>
       <button id="mode-cancel-btn" class="modal-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Invite link modal -->
+  <div id="invite-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div style="font-size:2.5rem">🔗</div>
+      <h2>Invite Opponent</h2>
+      <p style="color:#9a8060;font-size:0.9rem;text-align:center">Share this link with your opponent.<br>The game starts when they join.</p>
+      <div id="invite-link-box" style="background:#1a0e05;border:1px solid #4a2e0e;border-radius:6px;padding:10px 14px;font-size:0.8rem;word-break:break-all;color:#e2b96f;max-width:280px;text-align:center"></div>
+      <button id="invite-copy-btn" class="btn btn-primary" style="width:100%">Copy Link</button>
+      <button id="invite-close-btn" class="modal-cancel">Close &amp; Wait for Opponent</button>
     </div>
   </div>
 

@@ -2,6 +2,7 @@ import { Board } from './board';
 import * as api from './api';
 import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
 import { playMove, playCapture, playCheck, playGameOver } from './sound';
+import { connectToGame, disconnectFromGame } from './ws-client';
 
 const LEVELS: Record<number, string> = {
   1: 'Beginner',
@@ -22,6 +23,7 @@ let showActiveOnly = true;
 let gameIsActive = false;
 let moveHistory: string[] = [];
 let viewIndex = 0;
+let currentPlayerColor: 'w' | 'b' | null = null; // null = not multiplayer
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -53,7 +55,14 @@ const overlayNewGame = document.getElementById('overlay-new-game')!;
 const modeModalEl = document.getElementById('mode-modal')!;
 const modePvpBtn = document.getElementById('mode-pvp-btn')!;
 const modeComputerBtn = document.getElementById('mode-computer-btn')!;
+const modeMultiplayerBtn = document.getElementById('mode-multiplayer-btn')!;
 const modeCancelBtn = document.getElementById('mode-cancel-btn')!;
+
+// Invite modal elements
+const inviteModalEl = document.getElementById('invite-modal')!;
+const inviteLinkBox = document.getElementById('invite-link-box')!;
+const inviteCopyBtn = document.getElementById('invite-copy-btn')!;
+const inviteCloseBtn = document.getElementById('invite-close-btn')!;
 
 // Payment modal elements
 const paymentModalEl = document.getElementById('payment-modal')!;
@@ -76,23 +85,45 @@ levelSlider.addEventListener('input', () => {
   levelName.textContent = LEVELS[v];
 });
 
-function showModeModal(): Promise<'pvp' | 'computer' | null> {
+function showModeModal(): Promise<'pvp' | 'computer' | 'multiplayer' | null> {
   return new Promise((resolve) => {
     modeModalEl.classList.remove('hidden');
-    const cleanup = (r: 'pvp' | 'computer' | null) => {
+    const cleanup = (r: 'pvp' | 'computer' | 'multiplayer' | null) => {
       modeModalEl.classList.add('hidden');
       modePvpBtn.removeEventListener('click', onPvp);
       modeComputerBtn.removeEventListener('click', onComputer);
+      modeMultiplayerBtn.removeEventListener('click', onMultiplayer);
       modeCancelBtn.removeEventListener('click', onCancel);
       resolve(r);
     };
     const onPvp = () => cleanup('pvp');
     const onComputer = () => cleanup('computer');
+    const onMultiplayer = () => cleanup('multiplayer');
     const onCancel = () => cleanup(null);
     modePvpBtn.addEventListener('click', onPvp);
     modeComputerBtn.addEventListener('click', onComputer);
+    modeMultiplayerBtn.addEventListener('click', onMultiplayer);
     modeCancelBtn.addEventListener('click', onCancel);
   });
+}
+
+function showInviteModal(inviteCode: string): void {
+  const url = `${window.location.origin}?join=${inviteCode}`;
+  inviteLinkBox.textContent = url;
+  inviteModalEl.classList.remove('hidden');
+
+  const onCopy = async () => {
+    await navigator.clipboard.writeText(url).catch(() => {});
+    inviteCopyBtn.textContent = 'Copied!';
+    setTimeout(() => { inviteCopyBtn.textContent = 'Copy Link'; }, 2000);
+  };
+  const onClose = () => {
+    inviteModalEl.classList.add('hidden');
+    inviteCopyBtn.removeEventListener('click', onCopy);
+    inviteCloseBtn.removeEventListener('click', onClose);
+  };
+  inviteCopyBtn.addEventListener('click', onCopy);
+  inviteCloseBtn.addEventListener('click', onClose);
 }
 
 function showPaymentModal(): Promise<boolean> {
@@ -155,6 +186,13 @@ async function startNewGame(): Promise<void> {
     return;
   }
 
+  if (modeChoice === 'multiplayer') {
+    const state = await api.createGame('multiplayer');
+    beginGame(state);
+    if (state.inviteCode) showInviteModal(state.inviteCode);
+    return;
+  }
+
   // vs computer — check premium membership
   const me = await api.getMe();
   if (!me.premium) {
@@ -165,7 +203,6 @@ async function startNewGame(): Promise<void> {
   // pick level
   const level = await showLevelModal();
   if (level === -1 || level === null) {
-    // -1 = cancel, null = back → re-show mode modal
     if (level === null) startNewGame();
     return;
   }
@@ -174,8 +211,19 @@ async function startNewGame(): Promise<void> {
   beginGame(state);
 }
 
+function isMyTurn(turn: 'w' | 'b', mode: api.GameMode, waitingForOpponent: boolean): boolean {
+  if (mode !== 'multiplayer') return true;
+  if (waitingForOpponent) return false;
+  return currentPlayerColor === turn;
+}
+
+function isFlipped(): boolean {
+  return currentPlayerColor === 'b';
+}
+
 function beginGame(state: api.GameState): void {
   currentGameId = state.gameId;
+  currentPlayerColor = state.playerColor ?? null;
   gameIsActive = true;
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
@@ -184,19 +232,24 @@ function beginGame(state: api.GameState): void {
   newGameBtn.classList.add('hidden');
   lobbyBtn.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
-  board.setFen(state.fen, true);
+  const interactive = isMyTurn(state.turn, state.mode, state.waitingForOpponent);
+  board.setFen(state.fen, interactive, isFlipped());
   setMoveHistory([]);
   navBackBtn.classList.remove('hidden');
   navFwdBtn.classList.remove('hidden');
-  updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+  updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
   renderMoveList([]);
   updateCapturedPieces(state.fen);
   refreshGameList();
+  if (state.mode === 'multiplayer') {
+    connectToGame(state.gameId, handleWsEvent);
+  }
 }
 
 async function loadGame(gameId: string): Promise<void> {
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
+  currentPlayerColor = state.playerColor ?? null;
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
   const active = ['active', 'check'].includes(state.status);
@@ -211,19 +264,46 @@ async function loadGame(gameId: string): Promise<void> {
   lobbyBtn.classList.remove('hidden');
   moveListEl.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
-  board.setFen(state.fen, active);
+  const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
+  board.setFen(state.fen, interactive, isFlipped());
   setMoveHistory(state.moves);
   navBackBtn.classList.remove('hidden');
   navFwdBtn.classList.remove('hidden');
-  updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+  updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
   renderMoveList(state.moves);
   updateCapturedPieces(state.fen);
+  if (state.mode === 'multiplayer') {
+    connectToGame(state.gameId, handleWsEvent);
+  }
+}
+
+async function handleWsEvent(event: { type: string; gameId: string }): Promise<void> {
+  if (event.gameId !== currentGameId) return;
+  if (event.type === 'move' || event.type === 'opponent_joined' || event.type === 'resigned') {
+    const state = await api.getGame(currentGameId!);
+    const active = ['active', 'check'].includes(state.status);
+    gameIsActive = active;
+    const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
+    board!.setFen(state.fen, interactive, isFlipped());
+    updateCapturedPieces(state.fen);
+    setMoveHistory(state.moves);
+    updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
+    renderMoveList(state.moves);
+    if (event.type === 'move') {
+      playMove();
+    }
+    if (!active) {
+      playGameOver();
+      showOverlay(state.status);
+    }
+    refreshGameList();
+  }
 }
 
 async function handleMove(from: string, to: string): Promise<void> {
   if (!currentGameId) return;
   try {
-    board!.setFen(board!.getCurrentFen(), false);
+    board!.setFen(board!.getCurrentFen(), false, isFlipped());
     statusEl.textContent = 'Thinking…';
 
     const result = await api.postMove(currentGameId, from, to);
@@ -234,14 +314,14 @@ async function handleMove(from: string, to: string): Promise<void> {
     else playMove();
 
     if (result.computerMove) {
-      board!.setFen(result.move.fenAfter, false);
+      board!.setFen(result.move.fenAfter, false, isFlipped());
       await new Promise(r => setTimeout(r, 1000));
       // Computer move sound
       if (result.computerMove.san.includes('x')) playCapture();
       else playMove();
     }
 
-    board!.setFen(result.fen, active);
+    board!.setFen(result.fen, active, isFlipped());
     updateCapturedPieces(result.fen);
 
     const state = await api.getGame(currentGameId);
@@ -260,13 +340,28 @@ async function handleMove(from: string, to: string): Promise<void> {
     refreshGameList();
   } catch (err: any) {
     const state = await api.getGame(currentGameId!);
-    board!.setFen(state.fen, true);
+    board!.setFen(state.fen, true, isFlipped());
     updateStatus(state.status, state.turn, state.mode, state.computerLevel);
     statusEl.textContent = err.message;
   }
 }
 
-function updateStatus(status: string, turn: string, mode: api.GameMode, level: number | null): void {
+function updateStatus(status: string, turn: string, mode: api.GameMode, level: number | null, waitingForOpponent = false): void {
+  if (mode === 'multiplayer') {
+    if (waitingForOpponent) { statusEl.textContent = 'Waiting for opponent…'; return; }
+    const myTurn = currentPlayerColor === turn;
+    const statusMap: Record<string, string> = {
+      active: myTurn ? 'Your turn' : "Opponent's turn",
+      check: myTurn ? 'You are in check!' : 'Opponent is in check',
+      checkmate: 'Checkmate!',
+      stalemate: 'Stalemate — draw',
+      draw: 'Draw',
+      resigned: 'Resigned',
+    };
+    statusEl.textContent = statusMap[status] ?? status;
+    return;
+  }
+
   const isComputer = mode === 'vs_computer';
   const turnLabel = turn === 'w'
     ? (isComputer ? 'Your turn' : 'White to move')
@@ -298,7 +393,7 @@ function navigateTo(index: number): void {
   if (index < 0 || index >= moveHistory.length) return;
   viewIndex = index;
   const isLatest = viewIndex === moveHistory.length - 1;
-  board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive);
+  board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive, isFlipped());
   updateNavButtons();
   highlightMoveInList(viewIndex - 1); // viewIndex 0 = before any moves
   updateCapturedPieces(moveHistory[viewIndex]);
@@ -384,7 +479,9 @@ function showOverlay(status: string): void {
 }
 
 function returnToStart(): void {
+  disconnectFromGame();
   currentGameId = null;
+  currentPlayerColor = null;
   board = null;
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.add('empty');
@@ -409,9 +506,10 @@ async function refreshGameList(): Promise<void> {
     const li = document.createElement('li');
     li.className = 'game-item' + (g.gameId === currentGameId ? ' active-game' : '');
     const date = new Date(g.createdAt).toLocaleDateString();
-    const modeLabel = g.mode === 'vs_computer'
-      ? `vs CPU Lvl ${g.computerLevel}`
-      : '2P';
+    let modeLabel: string;
+    if (g.mode === 'vs_computer') modeLabel = `vs CPU Lvl ${g.computerLevel}`;
+    else if (g.mode === 'multiplayer') modeLabel = g.waitingForOpponent ? '🌐 Waiting…' : `🌐 ${g.playerColor === 'w' ? 'White' : 'Black'}`;
+    else modeLabel = '2P';
     li.textContent = `${date} · ${modeLabel} · ${g.status} (${g.moveCount})`;
     li.addEventListener('click', () => { loadGame(g.gameId); closeSidebar(); });
     gameListEl.appendChild(li);
@@ -467,12 +565,22 @@ async function boot(): Promise<void> {
     if (await isAuthenticated()) {
       const params = new URLSearchParams(window.location.search);
       const paymentSuccess = params.get('payment') === 'success';
-      if (paymentSuccess) {
-        history.replaceState({}, '', window.location.pathname);
+      const joinCode = params.get('join');
+      history.replaceState({}, '', window.location.pathname);
+      await showApp(paymentSuccess);
+      if (joinCode) {
+        try {
+          const state = await api.joinGame(joinCode);
+          beginGame(state);
+        } catch (e: any) {
+          statusEl.textContent = e.message ?? 'Failed to join game';
+        }
       }
-      showApp(paymentSuccess);
       return;
     }
+    // Not authenticated — save join code so we redirect back after login
+    const joinCode = new URLSearchParams(window.location.search).get('join');
+    if (joinCode) sessionStorage.setItem('pendingJoin', joinCode);
   } catch (e) {
     console.error('Auth init error:', e);
   }
@@ -497,6 +605,18 @@ async function showApp(paymentSuccess = false): Promise<void> {
     setTimeout(() => banner.classList.add('hidden'), 5000);
   }
   refreshGameList();
+
+  // Handle pending join from before login
+  const pendingJoin = sessionStorage.getItem('pendingJoin');
+  if (pendingJoin) {
+    sessionStorage.removeItem('pendingJoin');
+    try {
+      const state = await api.joinGame(pendingJoin);
+      beginGame(state);
+    } catch (e: any) {
+      statusEl.textContent = e.message ?? 'Failed to join game';
+    }
+  }
 }
 
 async function pollForPremium(): Promise<void> {

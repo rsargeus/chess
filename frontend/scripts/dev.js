@@ -19,13 +19,14 @@ esbuild.context({
     '__AUTH0_CLIENT_ID__':  JSON.stringify(process.env.AUTH0_CLIENT_ID  ?? ''),
     '__AUTH0_AUDIENCE__':   JSON.stringify(process.env.AUTH0_AUDIENCE   ?? ''),
     '__BACKEND_URL__':      JSON.stringify(''),
+    '__WS_URL__':           JSON.stringify(''),
   },
 }).then(ctx => {
   ctx.watch();
 
   http.createServer((req, res) => {
     // Proxy /games and /checkout to backend
-    if (req.url.startsWith('/games') || req.url.startsWith('/checkout') || req.url.startsWith('/me')) {
+    if (req.url.startsWith('/games') || req.url.startsWith('/checkout') || req.url.startsWith('/me') || req.url.startsWith('/webhooks')) {
       const options = {
         hostname: 'localhost',
         port: 3000,

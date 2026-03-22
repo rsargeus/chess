@@ -1,4 +1,5 @@
 import { Chess } from 'chess.js';
+import crypto from 'crypto';
 import { Game, GameMode, GameStatus } from './models/Game';
 import { Move } from './models/Move';
 import { getBestMove, parseUciMove } from './stockfish';
@@ -27,10 +28,34 @@ async function saveMove(
   await Move.create({ gameId, moveNumber, from, to, san, fenAfter: fen, playedAt: new Date() });
 }
 
+function generateInviteCode(): string {
+  return crypto.randomBytes(6).toString('hex'); // 12-char hex string
+}
+
+function playerColor(game: { whiteUserId: string | null; blackUserId: string | null }, userId: string): 'w' | 'b' | null {
+  if (game.whiteUserId === userId) return 'w';
+  if (game.blackUserId === userId) return 'b';
+  return null;
+}
+
+function canAccess(game: { userId: string; whiteUserId: string | null; blackUserId: string | null }, userId: string): boolean {
+  return game.userId === userId || game.whiteUserId === userId || game.blackUserId === userId;
+}
+
 export async function createGame(userId: string, mode: GameMode = 'pvp', computerLevel: number | null = null) {
   const chess = new Chess();
   const level = mode === 'vs_computer' ? (computerLevel ?? 5) : null;
-  const game = await Game.create({ userId, fen: chess.fen(), status: 'active', mode, computerLevel: level });
+  const isMultiplayer = mode === 'multiplayer';
+  const game = await Game.create({
+    userId,
+    whiteUserId: isMultiplayer ? userId : null,
+    blackUserId: null,
+    inviteCode: isMultiplayer ? generateInviteCode() : null,
+    fen: chess.fen(),
+    status: 'active',
+    mode,
+    computerLevel: level,
+  });
   return {
     gameId: game._id.toString(),
     fen: game.fen,
@@ -38,17 +63,54 @@ export async function createGame(userId: string, mode: GameMode = 'pvp', compute
     turn: chess.turn(),
     mode: game.mode,
     computerLevel: game.computerLevel,
+    inviteCode: game.inviteCode,
+    playerColor: isMultiplayer ? 'w' : null,
+  };
+}
+
+export async function joinGame(inviteCode: string, userId: string) {
+  const game = await Game.findOne({ inviteCode });
+  if (!game) return { error: 'Invalid invite code', status: 404 };
+  if (game.blackUserId) return { error: 'Game is already full', status: 409 };
+  if (game.whiteUserId === userId) return { error: 'Cannot join your own game', status: 400 };
+
+  game.blackUserId = userId;
+  await game.save();
+
+  const chess = new Chess(game.fen);
+  const moves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();
+  return {
+    gameId: game._id.toString(),
+    fen: game.fen,
+    turn: chess.turn(),
+    status: game.status,
+    mode: game.mode,
+    computerLevel: game.computerLevel,
+    inviteCode: game.inviteCode,
+    playerColor: 'b' as const,
+    moves: moves.map((m) => ({
+      moveNumber: m.moveNumber,
+      from: m.from,
+      to: m.to,
+      san: m.san,
+      fenAfter: m.fenAfter,
+      playedAt: m.playedAt,
+    })),
   };
 }
 
 export async function listGames(userId: string) {
-  const games = await Game.find({ userId }).sort({ createdAt: -1 }).lean();
+  const games = await Game.find({
+    $or: [{ userId }, { whiteUserId: userId }, { blackUserId: userId }],
+  }).sort({ createdAt: -1 }).lean();
+
   const ids = games.map((g) => g._id);
   const counts = await Move.aggregate([
     { $match: { gameId: { $in: ids } } },
     { $group: { _id: '$gameId', count: { $sum: 1 } } },
   ]);
   const countMap = new Map(counts.map((c) => [c._id.toString(), c.count]));
+
   return games.map((g) => ({
     gameId: g._id.toString(),
     status: g.status,
@@ -56,13 +118,16 @@ export async function listGames(userId: string) {
     computerLevel: g.computerLevel,
     createdAt: g.createdAt,
     moveCount: countMap.get(g._id.toString()) ?? 0,
+    playerColor: g.mode === 'multiplayer' ? playerColor(g, userId) : null,
+    waitingForOpponent: g.mode === 'multiplayer' && !g.blackUserId,
   }));
 }
 
 export async function getGame(gameId: string, userId?: string) {
-  const query = userId ? { _id: gameId, userId } : { _id: gameId };
-  const game = await Game.findOne(query).lean();
+  const game = await Game.findById(gameId).lean();
   if (!game) return null;
+  if (userId && !canAccess(game, userId)) return null;
+
   const moves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();
   const chess = new Chess(game.fen);
   return {
@@ -72,6 +137,9 @@ export async function getGame(gameId: string, userId?: string) {
     status: game.status,
     mode: game.mode,
     computerLevel: game.computerLevel,
+    inviteCode: game.inviteCode,
+    playerColor: game.mode === 'multiplayer' && userId ? playerColor(game, userId) : null,
+    waitingForOpponent: game.mode === 'multiplayer' && !game.blackUserId,
     moves: moves.map((m) => ({
       moveNumber: m.moveNumber,
       from: m.from,
@@ -84,14 +152,22 @@ export async function getGame(gameId: string, userId?: string) {
 }
 
 export async function applyMove(gameId: string, from: string, to: string, userId?: string) {
-  const query = userId ? { _id: gameId, userId } : { _id: gameId };
-  const game = await Game.findOne(query);
+  const game = await Game.findById(gameId);
   if (!game) return { error: 'Game not found', status: 404 };
+  if (userId && !canAccess(game, userId)) return { error: 'Game not found', status: 404 };
   if (!['active', 'check'].includes(game.status)) {
     return { error: 'Game is already over', status: 400 };
   }
 
   const chess = new Chess(game.fen);
+
+  // Multiplayer: verify it's the right player's turn
+  if (game.mode === 'multiplayer' && userId) {
+    if (!game.blackUserId) return { error: 'Waiting for opponent to join', status: 400 };
+    const color = playerColor(game, userId);
+    if (color !== chess.turn()) return { error: 'Not your turn', status: 400 };
+  }
+
   let result;
   try {
     result = chess.move({ from, to, promotion: 'q' });
@@ -143,9 +219,9 @@ export async function applyMove(gameId: string, from: string, to: string, userId
 }
 
 export async function resignGame(gameId: string, userId?: string) {
-  const query = userId ? { _id: gameId, userId } : { _id: gameId };
-  const game = await Game.findOne(query);
+  const game = await Game.findById(gameId);
   if (!game) return false;
+  if (userId && !canAccess(game, userId)) return false;
   game.status = 'resigned';
   await game.save();
   return true;

@@ -15,6 +15,7 @@ esbuild.buildSync({
     '__AUTH0_CLIENT_ID__':  JSON.stringify(process.env.AUTH0_CLIENT_ID  ?? ''),
     '__AUTH0_AUDIENCE__':   JSON.stringify(process.env.AUTH0_AUDIENCE   ?? ''),
     '__BACKEND_URL__':      JSON.stringify(process.env.BACKEND_URL      ?? ''),
+    '__WS_URL__':           JSON.stringify((process.env.BACKEND_URL ?? '').replace(/^http/, 'ws')),
   },
 });
 

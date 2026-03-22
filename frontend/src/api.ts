@@ -18,6 +18,8 @@ export interface GameSummary {
   computerLevel: number | null;
   createdAt: string;
   moveCount: number;
+  playerColor: 'w' | 'b' | null;
+  waitingForOpponent: boolean;
 }
 
 export interface MoveRecord {
@@ -36,6 +38,9 @@ export interface GameState {
   status: string;
   mode: GameMode;
   computerLevel: number | null;
+  inviteCode: string | null;
+  playerColor: 'w' | 'b' | null;
+  waitingForOpponent: boolean;
   moves: MoveRecord[];
 }
 
@@ -82,6 +87,18 @@ export async function postMove(gameId: string, from: string, to: string): Promis
 
 export async function resignGame(gameId: string): Promise<void> {
   await fetch(`${BASE}/${gameId}`, { method: 'DELETE', headers: await authHeaders() });
+}
+
+export async function joinGame(inviteCode: string): Promise<GameState> {
+  const res = await fetch(`${BASE}/join/${inviteCode}`, {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? 'Failed to join game');
+  }
+  return res.json();
 }
 
 export async function getMe(): Promise<{ premium: boolean }> {

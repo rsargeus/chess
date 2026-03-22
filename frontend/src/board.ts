@@ -137,6 +137,7 @@ export class Board {
   private highlights: Set<SquareId> = new Set();
   private onMove: (from: SquareId, to: SquareId) => void;
   private interactive: boolean = true;
+  private flipped: boolean = false;
 
   constructor(container: HTMLElement, onMove: (from: SquareId, to: SquareId) => void) {
     this.container = container;
@@ -149,11 +150,12 @@ export class Board {
     return this.chess.fen();
   }
 
-  setFen(fen: string, interactive = true): void {
+  setFen(fen: string, interactive = true, flipped = false): void {
     this.chess = new Chess(fen);
     this.selected = null;
     this.highlights = new Set();
     this.interactive = interactive;
+    this.flipped = flipped;
     this.render();
   }
 
@@ -161,8 +163,11 @@ export class Board {
     this.container.innerHTML = '';
     this.container.className = 'board';
 
-    for (const rank of RANKS) {
-      for (const file of FILES) {
+    const ranks = this.flipped ? [...RANKS].reverse() : RANKS;
+    const files = this.flipped ? [...FILES].reverse() : FILES;
+
+    for (const rank of ranks) {
+      for (const file of files) {
         const sq = file + rank as SquareId;
         const fileIdx = FILES.indexOf(file);
         const rankIdx = RANKS.indexOf(rank);
@@ -174,16 +179,16 @@ export class Board {
         if (this.selected === sq) cell.classList.add('selected');
         cell.dataset.sq = sq;
 
-        // Rank label: left edge of each square in the a-file (fileIdx === 0)
-        if (fileIdx === 0) {
+        // Rank label on the left edge of the first file column
+        if (file === files[0]) {
           const label = document.createElement('span');
           label.className = 'coord coord-rank';
           label.textContent = rank;
           cell.appendChild(label);
         }
 
-        // File label: bottom edge of each square in rank 1 (rankIdx === 7)
-        if (rankIdx === 7) {
+        // File label on the bottom edge of the last rank row
+        if (rank === ranks[ranks.length - 1]) {
           const label = document.createElement('span');
           label.className = 'coord coord-file';
           label.textContent = file;
