@@ -78,6 +78,29 @@ export const openApiSpec = {
   },
   security: [{ auth0: [] }],
   paths: {
+    '/me': {
+      get: {
+        summary: 'Get current user info',
+        description: 'Returns premium status for the authenticated user, sourced directly from Auth0.',
+        responses: {
+          '200': {
+            description: 'User info',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    premium: { type: 'boolean' },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Missing or invalid JWT' },
+          '500': { description: 'Failed to fetch roles from Auth0' },
+        },
+      },
+    },
     '/games': {
       get: {
         summary: 'List games',
