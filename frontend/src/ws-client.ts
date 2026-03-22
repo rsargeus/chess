@@ -1,5 +1,7 @@
 declare const __WS_URL__: string;
 
+import { getToken } from './auth';
+
 type GameEventHandler = (event: { type: string; gameId: string }) => void;
 
 let ws: WebSocket | null = null;
@@ -9,14 +11,22 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 function getWsBase(): string {
   if (__WS_URL__) return __WS_URL__;
-  // Derive from current location in dev (ws://localhost:3000)
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//localhost:3000`;
 }
 
-function connect(gameId: string): void {
+async function connect(gameId: string): Promise<void> {
   if (ws) ws.close();
-  ws = new WebSocket(`${getWsBase()}?gameId=${gameId}`);
+  ws = new WebSocket(getWsBase());
+
+  ws.onopen = async () => {
+    try {
+      const token = await getToken();
+      ws!.send(JSON.stringify({ type: 'auth', token, gameId }));
+    } catch {
+      ws!.close(1008, 'Could not get token');
+    }
+  };
 
   ws.onmessage = (ev) => {
     try {
@@ -26,7 +36,6 @@ function connect(gameId: string): void {
   };
 
   ws.onclose = () => {
-    // Auto-reconnect after 3s if we still care about this game
     if (currentGameId === gameId) {
       reconnectTimer = setTimeout(() => connect(gameId), 3000);
     }

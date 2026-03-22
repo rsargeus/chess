@@ -20,7 +20,14 @@ async function getManagementToken(): Promise<string> {
   return tokenCache.access_token;
 }
 
+// Short-lived cache to avoid hammering Auth0 Management API
+const rolesCache = new Map<string, { roles: string[]; expiresAt: number }>();
+const ROLES_CACHE_TTL_MS = 30_000;
+
 export async function getUserRoles(userId: string): Promise<string[]> {
+  const cached = rolesCache.get(userId);
+  if (cached && cached.expiresAt > Date.now()) return cached.roles;
+
   const token = await getManagementToken();
   const res = await fetch(
     `https://${process.env.AUTH0_DOMAIN}/api/v2/users/${encodeURIComponent(userId)}/roles`,
@@ -30,8 +37,14 @@ export async function getUserRoles(userId: string): Promise<string[]> {
     const err = await res.json();
     throw new Error(`Auth0 get roles failed: ${JSON.stringify(err)}`);
   }
-  const roles = await res.json() as { name: string }[];
-  return roles.map(r => r.name.toLowerCase());
+  const data = await res.json() as { name: string }[];
+  const roles = data.map(r => r.name.toLowerCase());
+  rolesCache.set(userId, { roles, expiresAt: Date.now() + ROLES_CACHE_TTL_MS });
+  return roles;
+}
+
+export function invalidateRolesCache(userId: string): void {
+  rolesCache.delete(userId);
 }
 
 export async function assignPremiumRole(userId: string): Promise<void> {

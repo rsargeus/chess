@@ -103,7 +103,9 @@
     .main {
       flex: 1;
       display: flex;
-      align-items: center;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      align-content: flex-start;
       justify-content: center;
       gap: 32px;
       padding: 24px;
@@ -194,7 +196,9 @@
 
     /* Panel */
     .panel {
-      width: 220px;
+      min-width: 220px;
+      flex: 1 1 220px;
+      max-width: min(70vh, 560px);
       display: flex;
       flex-direction: column;
       gap: 12px;
@@ -557,7 +561,9 @@
       /* Main stacks vertically */
       .main {
         flex-direction: column;
+        flex-wrap: nowrap;
         align-items: center;
+        justify-content: flex-start;
         padding: 12px;
         gap: 16px;
         overflow: auto;
@@ -577,7 +583,7 @@
       /* Panel goes full width below board */
       .panel {
         width: 100%;
-        max-width: 560px;
+        max-width: min(90vw, 440px);
       }
       #move-list { max-height: 160px; }
 

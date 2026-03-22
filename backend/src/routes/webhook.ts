@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
-import { assignPremiumRole } from '../auth0Management';
+import { assignPremiumRole, invalidateRolesCache } from '../auth0Management';
 
 const router = Router();
 
@@ -22,6 +22,7 @@ router.post('/', async (req: Request, res: Response) => {
     if (userId) {
       try {
         await assignPremiumRole(userId);
+        invalidateRolesCache(userId);
         console.log(`Premium role assigned to ${userId}`);
       } catch (err) {
         console.error('Failed to assign premium role:', err);

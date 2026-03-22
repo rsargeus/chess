@@ -69,13 +69,23 @@ export async function createGame(userId: string, mode: GameMode = 'pvp', compute
 }
 
 export async function joinGame(inviteCode: string, userId: string) {
-  const game = await Game.findOne({ inviteCode });
-  if (!game) return { error: 'Invalid invite code', status: 404 };
-  if (game.blackUserId) return { error: 'Game is already full', status: 409 };
-  if (game.whiteUserId === userId) return { error: 'Cannot join your own game', status: 400 };
-
-  game.blackUserId = userId;
-  await game.save();
+  // findOneAndUpdate with blackUserId: null ensures atomic check-and-set
+  const game = await Game.findOneAndUpdate(
+    { inviteCode, blackUserId: null },
+    { $set: { blackUserId: userId } },
+    { new: true }
+  );
+  if (!game) {
+    const existing = await Game.findOne({ inviteCode });
+    if (!existing) return { error: 'Invalid invite code', status: 404 };
+    if (existing.whiteUserId === userId) return { error: 'Cannot join your own game', status: 400 };
+    return { error: 'Game is already full', status: 409 };
+  }
+  if (game.whiteUserId === userId) {
+    // Roll back — user managed to join their own game (race edge case)
+    await Game.findByIdAndUpdate(game._id, { $set: { blackUserId: null } });
+    return { error: 'Cannot join your own game', status: 400 };
+  }
 
   const chess = new Chess(game.fen);
   const moves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();

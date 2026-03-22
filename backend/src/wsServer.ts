@@ -1,28 +1,66 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage, Server } from 'http';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { Game } from './models/Game';
 
 // gameId → connected sockets
 const rooms = new Map<string, Set<WebSocket>>();
 
+const JWKS = createRemoteJWKSet(
+  new URL(`https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`)
+);
+
+async function verifyToken(token: string): Promise<string | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: `https://${process.env.AUTH0_DOMAIN}/`,
+      audience: process.env.AUTH0_AUDIENCE,
+    });
+    return (payload.sub as string) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function canAccess(game: { userId: string; whiteUserId: string | null; blackUserId: string | null }, userId: string): boolean {
+  return game.userId === userId || game.whiteUserId === userId || game.blackUserId === userId;
+}
+
+function addToRoom(gameId: string, ws: WebSocket): void {
+  if (!rooms.has(gameId)) rooms.set(gameId, new Set());
+  rooms.get(gameId)!.add(ws);
+  ws.on('close', () => {
+    rooms.get(gameId)?.delete(ws);
+    if (rooms.get(gameId)?.size === 0) rooms.delete(gameId);
+  });
+}
+
 export function initWebSocketServer(server: Server): void {
   const wss = new WebSocketServer({ server });
 
-  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
-    const url = new URL(req.url ?? '', 'http://localhost');
-    const gameId = url.searchParams.get('gameId');
-    if (!gameId) { ws.close(1008, 'gameId required'); return; }
+  wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
+    // Expect first message: { type: 'auth', token: JWT, gameId: string }
+    const authTimeout = setTimeout(() => ws.close(1008, 'Auth timeout'), 5000);
 
-    if (!rooms.has(gameId)) rooms.set(gameId, new Set());
-    rooms.get(gameId)!.add(ws);
+    ws.once('message', async (data) => {
+      clearTimeout(authTimeout);
+      try {
+        const { token, gameId } = JSON.parse(data.toString());
+        if (!token || !gameId) { ws.close(1008, 'token and gameId required'); return; }
 
-    ws.on('close', () => {
-      rooms.get(gameId)?.delete(ws);
-      if (rooms.get(gameId)?.size === 0) rooms.delete(gameId);
+        const userId = await verifyToken(token);
+        if (!userId) { ws.close(1008, 'Invalid token'); return; }
+
+        const game = await Game.findById(gameId).lean();
+        if (!game || !canAccess(game, userId)) { ws.close(1008, 'Access denied'); return; }
+
+        addToRoom(gameId, ws);
+        (ws as any).isAlive = true;
+        ws.on('pong', () => { (ws as any).isAlive = true; });
+      } catch {
+        ws.close(1008, 'Auth failed');
+      }
     });
-
-    // Keep-alive pings
-    ws.on('pong', () => { (ws as any).isAlive = true; });
-    (ws as any).isAlive = true;
   });
 
   // Ping all clients every 30s, drop dead connections
