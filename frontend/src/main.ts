@@ -365,11 +365,11 @@ function updateStatus(status: string, turn: string, mode: api.GameMode, level: n
   const isComputer = mode === 'vs_computer';
   const turnLabel = turn === 'w'
     ? (isComputer ? 'Your turn' : 'White to move')
-    : (isComputer ? `Computer (${LEVELS[level ?? 5]})` : 'Black to move');
+    : (isComputer ? `AI (${LEVELS[level ?? 5]})` : 'Black to move');
 
   const statusMap: Record<string, string> = {
     active: turnLabel,
-    check: isComputer && turn === 'w' ? 'You are in check' : isComputer ? 'Computer is in check' : `${turn === 'w' ? 'White' : 'Black'} is in check`,
+    check: isComputer && turn === 'w' ? 'You are in check' : isComputer ? 'AI is in check' : `${turn === 'w' ? 'White' : 'Black'} is in check`,
     checkmate: 'Checkmate!',
     stalemate: 'Stalemate — draw',
     draw: 'Draw',
@@ -512,7 +512,7 @@ async function refreshGameList(): Promise<void> {
   }
 
   function opponentLabel(g: GameSummary): string {
-    if (g.mode === 'vs_computer') return `CPU Level ${g.computerLevel}`;
+    if (g.mode === 'vs_computer') return `AI Level ${g.computerLevel}`;
     if ((g.mode as string) === 'multiplayer') {
       if (g.waitingForOpponent) return 'Invite sent…';
       return g.playerColor === 'w' ? 'Playing as White' : 'Playing as Black';
