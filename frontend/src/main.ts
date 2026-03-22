@@ -29,8 +29,8 @@ const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
 const loginScreenEl  = document.getElementById('login-screen')!;
 const appEl          = document.getElementById('app')!;
-const loginGoogleBtn = document.getElementById('login-google-btn')!;
-const loginEmailBtn  = document.getElementById('login-email-btn')!;
+const loginGoogleBtns = document.querySelectorAll<HTMLElement>('.js-login-google');
+const loginEmailBtns  = document.querySelectorAll<HTMLElement>('.js-login-email');
 const userNameEl     = document.getElementById('user-name')!;
 const logoutBtn      = document.getElementById('logout-btn')!;
 const premiumBadgeEl = document.getElementById('premium-badge')!;
@@ -38,7 +38,7 @@ const premiumBadgeEl = document.getElementById('premium-badge')!;
 const boardEl        = document.getElementById('board')!;
 const statusEl       = document.getElementById('status')!;
 const moveListEl     = document.getElementById('move-list')!;
-const gameListEl     = document.getElementById('game-list')!;
+const gameListEl     = document.getElementById('game-list') as HTMLDivElement;
 const newGameBtn     = document.getElementById('new-game-btn')!;
 const resignBtn      = document.getElementById('resign-btn')!;
 const navBackBtn     = document.getElementById('nav-back-btn')!;
@@ -501,19 +501,89 @@ async function refreshGameList(): Promise<void> {
   const games = showActiveOnly
     ? allGames.filter(g => ['active', 'check'].includes(g.status))
     : allGames;
-  gameListEl.innerHTML = '';
-  for (const g of games) {
-    const li = document.createElement('li');
-    li.className = 'game-item' + (g.gameId === currentGameId ? ' active-game' : '');
-    const date = new Date(g.createdAt).toLocaleDateString();
-    let modeLabel: string;
-    if (g.mode === 'vs_computer') modeLabel = `vs CPU Lvl ${g.computerLevel}`;
-    else if (g.mode === 'multiplayer') modeLabel = g.waitingForOpponent ? '🌐 Waiting…' : `🌐 ${g.playerColor === 'w' ? 'White' : 'Black'}`;
-    else modeLabel = '2P';
-    li.textContent = `${date} · ${modeLabel} · ${g.status} (${g.moveCount})`;
-    li.addEventListener('click', () => { loadGame(g.gameId); closeSidebar(); });
-    gameListEl.appendChild(li);
+  const ICON_EARTH = `<svg width="18" height="18" viewBox="0 0 32 32" fill="none"><defs><radialGradient id="eg" cx="0.4" cy="0.38" r="0.65" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#4a6878"/><stop offset="100%" stop-color="#263848"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#eg)"/><g transform="rotate(-23.5,16,16)"><path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/><path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/><path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/><ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/><ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/></g><circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/></svg>`;
+  const ICON_HELM = `<svg width="18" height="21" viewBox="0 0 32 38" fill="none"><defs><linearGradient id="hg" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#141e28"/><stop offset="30%" stop-color="#283848"/><stop offset="55%" stop-color="#1e2c3a"/><stop offset="80%" stop-color="#283848"/><stop offset="100%" stop-color="#141e28"/></linearGradient><linearGradient id="hgg" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#dea83a"/><stop offset="60%" stop-color="#c8922a"/><stop offset="100%" stop-color="#9a6e18"/></linearGradient></defs><path d="M6 14 C6 5 26 5 26 14" fill="#1a2430"/><rect x="5" y="13" width="22" height="21" rx="2" fill="url(#hg)"/><path d="M5 29 L5 34 Q5 36 7 36 L25 36 Q27 36 27 34 L27 29 Z" fill="url(#hg)"/><rect x="7" y="14" width="2.5" height="18" rx="1.25" fill="rgba(255,255,255,0.07)"/><rect x="5" y="12" width="22" height="3.5" fill="url(#hgg)"/><circle cx="8.5" cy="13.8" r="1" fill="#f0d060"/><circle cx="16" cy="13.8" r="1" fill="#f0d060"/><circle cx="23.5" cy="13.8" r="1" fill="#f0d060"/><rect x="15" y="17" width="2" height="5.5" rx="1" fill="#c8922a"/><rect x="11.5" y="18.5" width="9" height="1.8" rx="0.9" fill="#c8922a"/><path d="M16 16 L17.2 17.5 L16 18.3 L14.8 17.5 Z" fill="#daa830"/><circle cx="11" cy="19.4" r="1.3" fill="#c8922a"/><circle cx="21" cy="19.4" r="1.3" fill="#c8922a"/><path d="M16 22.5 L17 21.8 L16 23.5 L15 21.8 Z" fill="#c8922a"/><rect x="5" y="24" width="22" height="2.5" fill="url(#hgg)"/><rect x="6" y="26.5" width="20" height="2.5" rx="0.8" fill="#060c12"/><rect x="5" y="29" width="22" height="2.5" fill="url(#hgg)"/><rect x="15" y="24" width="2" height="7.5" fill="#daa830"/><circle cx="8" cy="30.3" r="0.9" fill="#f0d060"/><circle cx="24" cy="30.3" r="0.9" fill="#f0d060"/></svg>`;
+  const ICON_PVP = `<svg width="18" height="18" viewBox="0 0 32 32" fill="none"><path d="M0 32 Q0 22 9 21 Q18 22 18 32Z" fill="#2a2a30"/><path d="M3.5 13 C3.5 5 14.5 5 14.5 13 C14.5 18.5 12 21.5 9 21.5 C6 21.5 3.5 18.5 3.5 13Z" fill="#525660"/><ellipse cx="9" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/><path d="M5.5 9.2 Q9 7.5 12.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/><path d="M14 32 Q14 22 23 21 Q32 22 32 32Z" fill="#343438"/><path d="M17.5 13 C17.5 5 28.5 5 28.5 13 C28.5 18.5 26 21.5 23 21.5 C20 21.5 17.5 18.5 17.5 13Z" fill="#646870"/><ellipse cx="23" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/><path d="M19.5 9.2 Q23 7.5 26.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/></svg>`;
+
+  function modeIcon(g: GameSummary): string {
+    if (g.mode === 'vs_computer') return ICON_HELM;
+    if ((g.mode as string) === 'multiplayer') return ICON_EARTH;
+    return ICON_PVP;
   }
+
+  function opponentLabel(g: GameSummary): string {
+    if (g.mode === 'vs_computer') return `CPU Level ${g.computerLevel}`;
+    if ((g.mode as string) === 'multiplayer') {
+      if (g.waitingForOpponent) return 'Invite sent…';
+      return g.playerColor === 'w' ? 'Playing as White' : 'Playing as Black';
+    }
+    return 'Local Game';
+  }
+
+  function formatDate(iso: string): string {
+    const d = new Date(iso);
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  const isFinished = (s: string) => ['checkmate', 'stalemate', 'resigned', 'draw'].includes(s);
+  const isActive   = (s: string) => ['active', 'check'].includes(s);
+
+  function isYourTurn(g: GameSummary): boolean {
+    if (!isActive(g.status)) return false;
+    if (g.mode === 'vs_computer' || g.mode === 'pvp') return true;
+    if (g.waitingForOpponent) return false;
+    return g.playerColor === g.turn;
+  }
+
+  function makeBadge(g: GameSummary): string {
+    if (g.waitingForOpponent) return `<span class="game-badge waiting">Waiting for opponent</span>`;
+    if (isFinished(g.status)) {
+      const label = g.status === 'checkmate' ? 'Checkmate' : g.status === 'resigned' ? 'Resigned' : g.status === 'stalemate' ? 'Stalemate' : 'Draw';
+      return `<span class="game-badge done">${label} · ${g.moveCount} moves</span>`;
+    }
+    if (isYourTurn(g)) return `<span class="turn-dot green"></span><span class="game-badge your-turn">Your turn</span>`;
+    return `<span class="turn-dot grey"></span><span class="game-badge their-turn">Their turn</span>`;
+  }
+
+  function makeCard(g: GameSummary): HTMLElement {
+    const div = document.createElement('div');
+    div.className = 'game-card' + (g.gameId === currentGameId ? ' active-game' : '');
+    div.innerHTML = `
+      <div class="mode-icon-sm">${modeIcon(g)}</div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">${opponentLabel(g)}</span>
+          <span class="card-date">${formatDate(g.createdAt)}</span>
+        </div>
+        <div class="card-bottom">
+          ${makeBadge(g)}
+          ${!isFinished(g.status) && !g.waitingForOpponent ? `<span class="card-moves">${g.moveCount} moves</span>` : ''}
+        </div>
+      </div>`;
+    div.addEventListener('click', () => { loadGame(g.gameId); closeSidebar(); });
+    return div;
+  }
+
+  function addSection(label: string, items: GameSummary[]) {
+    if (!items.length) return;
+    const header = document.createElement('div');
+    header.className = 'section-header';
+    header.textContent = label;
+    gameListEl.appendChild(header);
+    items.forEach(g => gameListEl.appendChild(makeCard(g)));
+  }
+
+  gameListEl.innerHTML = '';
+  const yourTurn  = games.filter(g => isActive(g.status) && isYourTurn(g));
+  const waiting   = games.filter(g => (isActive(g.status) && !isYourTurn(g)) || g.waitingForOpponent);
+  const finished  = games.filter(g => isFinished(g.status));
+  addSection('Your turn', yourTurn);
+  addSection('Waiting', waiting);
+  addSection('Finished', finished);
 }
 
 const activeFilterBtn = document.getElementById('active-filter-btn')!;
@@ -555,8 +625,21 @@ sidebarToggleBtn.addEventListener('click', () => {
   sidebarOverlayEl.classList.toggle('open', isOpen);
 });
 sidebarOverlayEl.addEventListener('click', closeSidebar);
-loginGoogleBtn.addEventListener('click', () => loginWithGoogle());
-loginEmailBtn.addEventListener('click', () => loginWithEmailPassword());
+loginGoogleBtns.forEach(btn => btn.addEventListener('click', () => loginWithGoogle()));
+loginEmailBtns.forEach(btn => btn.addEventListener('click', () => loginWithEmailPassword()));
+
+// Mobile onboarding: update dots on swipe
+const loginSlidesEl = document.getElementById('login-slides');
+if (loginSlidesEl) {
+  loginSlidesEl.addEventListener('scroll', () => {
+    const index = Math.round(loginSlidesEl.scrollLeft / loginSlidesEl.clientWidth);
+    loginSlidesEl.querySelectorAll('.login-slide').forEach(slide => {
+      slide.querySelectorAll('.slide-dot').forEach((dot, di) => {
+        dot.classList.toggle('active', di === index);
+      });
+    });
+  }, { passive: true });
+}
 logoutBtn.addEventListener('click', () => logout());
 
 async function boot(): Promise<void> {

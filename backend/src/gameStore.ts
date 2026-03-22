@@ -130,6 +130,7 @@ export async function listGames(userId: string) {
     moveCount: countMap.get(g._id.toString()) ?? 0,
     playerColor: g.mode === 'multiplayer' ? playerColor(g, userId) : null,
     waitingForOpponent: g.mode === 'multiplayer' && !g.blackUserId,
+    turn: g.fen.split(' ')[1] as 'w' | 'b',
   }));
 }
 

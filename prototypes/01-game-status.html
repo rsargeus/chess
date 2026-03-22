@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prototype 1 — Game Status Indicator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #160c04;
+      color: #d4c0a0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 24px;
+      gap: 48px;
+    }
+
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      letter-spacing: 0.1em;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .note {
+      color: #8a6040;
+      font-size: 0.85rem;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .scenarios {
+      display: flex;
+      gap: 40px;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .scenario-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #8a6040;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+
+    /* Board container */
+    .board-wrap {
+      position: relative;
+      border-radius: 6px;
+      transition: box-shadow 0.3s;
+    }
+
+    /* YOUR TURN — gold pulsing border */
+    .board-wrap.your-turn {
+      box-shadow: 0 0 0 3px #c8922a, 0 0 18px 4px rgba(200, 146, 42, 0.4);
+      animation: pulse-gold 2s ease-in-out infinite;
+    }
+    @keyframes pulse-gold {
+      0%, 100% { box-shadow: 0 0 0 3px #c8922a, 0 0 18px 4px rgba(200, 146, 42, 0.35); }
+      50%       { box-shadow: 0 0 0 3px #d4a84b, 0 0 28px 8px rgba(212, 168, 75, 0.55); }
+    }
+
+    /* OPPONENT'S TURN — muted */
+    .board-wrap.their-turn {
+      box-shadow: 0 0 0 3px #5c3610;
+      opacity: 0.65;
+    }
+
+    /* Mini board */
+    .mini-board {
+      width: 200px;
+      height: 200px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .sq.l { background: #EEEED2; }
+    .sq.d { background: #769656; }
+
+    /* Status pill */
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 16px;
+      border-radius: 20px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      margin-top: 14px;
+    }
+    .status-pill.your-turn {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border: 1px solid transparent;
+      font-weight: 700;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+    }
+    .status-pill.their-turn {
+      background: rgba(92, 54, 16, 0.25);
+      color: #8a6040;
+      border: 1px solid #5c3610;
+    }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot.green { background: #d4a84b; animation: blink 1.2s ease-in-out infinite; }
+    .dot.grey  { background: #5c3610; }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* Tab title simulation */
+    .tab-sim {
+      position: relative;
+      background: #1c0e04;
+      border: 1px solid #5c3610;
+      outline: 3px solid rgba(92,54,16,0.2);
+      outline-offset: 4px;
+      border-radius: 10px;
+      padding: 20px 28px;
+      max-width: 400px;
+      width: 100%;
+    }
+    .tab-sim::before {
+      content: '✦';
+      position: absolute;
+      top: -11px; left: 50%;
+      transform: translateX(-50%);
+      color: #c8922a;
+      font-size: 0.9rem;
+      background: #1c0e04;
+      padding: 0 8px;
+      line-height: 1;
+    }
+    .tab-sim h3 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      color: #8a6040;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+    }
+    .tab-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      margin-bottom: 6px;
+      border: 1px solid transparent;
+    }
+    .tab-row.active-tab {
+      background: linear-gradient(135deg, #2a1508 0%, #1e0e04 100%);
+      border-color: #5c3610;
+    }
+    .favicon { font-size: 1rem; }
+    .tab-title { flex: 1; color: #c4a878; font-size: 0.82rem; }
+    .tab-title.muted { color: #6a4820; }
+    .tab-badge {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }
+
+    .scenario { display: flex; flex-direction: column; align-items: center; }
+    .divider {
+      width: 1px;
+      background: linear-gradient(180deg, transparent, #5c3610, transparent);
+      align-self: stretch;
+    }
+  </style>
+</head>
+<body>
+  <h1>Prototype 1 — Game Status Indicator</h1>
+  <p class="note">
+    When it's your turn, the board gets a green pulsing glow. When waiting for the opponent, the board is muted.
+    The browser tab also shows a badge so you notice even when the app is in the background.
+  </p>
+
+  <div class="scenarios">
+
+    <!-- Your turn -->
+    <div class="scenario">
+      <div class="scenario-label">Your turn</div>
+      <div class="board-wrap your-turn">
+        <div class="mini-board" id="b1"></div>
+      </div>
+      <div class="status-pill your-turn">
+        <span class="dot green"></span>
+        Your turn
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Opponent's turn -->
+    <div class="scenario">
+      <div class="scenario-label">Waiting for opponent</div>
+      <div class="board-wrap their-turn">
+        <div class="mini-board" id="b2"></div>
+      </div>
+      <div class="status-pill their-turn">
+        <span class="dot grey"></span>
+        Opponent's turn
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Browser tab simulation -->
+  <div class="tab-sim">
+    <h3>Browser tab — when it's your turn</h3>
+    <div class="tab-row active-tab">
+      <span class="favicon">♟</span>
+      <span class="tab-title">Chess — Your turn</span>
+      <span class="tab-badge">1</span>
+    </div>
+    <div class="tab-row">
+      <span class="favicon">♟</span>
+      <span class="tab-title muted">Chess — Waiting…</span>
+    </div>
+  </div>
+
+  <script>
+    function renderBoard(id) {
+      const el = document.getElementById(id);
+      for (let r = 0; r < 8; r++) {
+        for (let f = 0; f < 8; f++) {
+          const sq = document.createElement('div');
+          sq.className = 'sq ' + ((r + f) % 2 === 0 ? 'l' : 'd');
+          el.appendChild(sq);
+        }
+      }
+    }
+    renderBoard('b1');
+    renderBoard('b2');
+  </script>
+</body>
+</html>

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prototype 3 — Game List</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, sans-serif;
+      background: #160c04;
+      color: #d4c0a0;
+      display: flex;
+      gap: 0;
+      min-height: 100vh;
+    }
+
+    .col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .col-label {
+      padding: 10px 16px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #8a6040;
+      border-bottom: 1px solid #5c3610;
+      background: #1c0e04;
+      box-shadow: inset 0 -1px 0 rgba(226,185,111,0.06);
+    }
+    .divider { width: 2px; background: #5c3610; flex-shrink: 0; }
+
+    /* ── CURRENT ── */
+    .current-list {
+      list-style: none;
+      flex: 1;
+      overflow-y: auto;
+      background: #160c04;
+    }
+    .current-header {
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #5c3610;
+      background: #1c0e04;
+    }
+    .current-item {
+      padding: 10px 16px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(92,54,16,0.4);
+      color: #a08050;
+    }
+    .current-item:hover { background: rgba(92,54,16,0.3); }
+    .current-item.active { background: rgba(92,54,16,0.45); color: #d4a84b; }
+
+    /* ── PROPOSED ── */
+    .new-sidebar {
+      background: #1c0e04;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar-header {
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #5c3610;
+    }
+    .sidebar-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #8a6040;
+    }
+    .filter-btn {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      padding: 3px 9px;
+      border-radius: 3px;
+      border: none;
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+
+    /* Section headers */
+    .section-header {
+      padding: 10px 14px 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #6a4020;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-header::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, #3a1e08, transparent);
+    }
+
+    /* Game card */
+    .game-card {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(92,54,16,0.35);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      transition: background 0.1s;
+    }
+    .game-card:hover { background: rgba(92,54,16,0.25); }
+    .game-card.active-game {
+      background: linear-gradient(135deg, rgba(42,21,8,0.8) 0%, rgba(30,14,4,0.6) 100%);
+      border-left: 2px solid #c8922a;
+    }
+
+    /* Mode icon */
+    .mode-icon {
+      font-size: 1rem;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 5px;
+      background: rgba(92,54,16,0.2);
+      border: 1px solid rgba(92,54,16,0.3);
+      flex-shrink: 0;
+    }
+
+    .card-body { flex: 1; min-width: 0; }
+
+    .card-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+    }
+    .card-opponent {
+      font-family: 'Cinzel', serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #d4c0a0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.02em;
+    }
+    .card-date {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      color: #6a4020;
+      flex-shrink: 0;
+      letter-spacing: 0.05em;
+    }
+    .card-bottom {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .card-moves {
+      font-size: 0.68rem;
+      color: #6a4020;
+    }
+
+    /* Status badges */
+    .badge {
+      font-family: 'Cinzel', serif;
+      font-size: 0.58rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    .badge.your-turn  { background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%); color: #1a0800; border: 1px solid transparent; font-weight: 700; box-shadow: 0 1px 4px rgba(0,0,0,0.35); }
+    .badge.their-turn { background: rgba(92,54,16,0.3);   color: #8a6040; border: 1px solid #5c3610; }
+    .badge.waiting    { background: rgba(200,146,42,0.1);  color: #c8922a; border: 1px solid rgba(200,146,42,0.25); }
+    .badge.done       { background: rgba(92,54,16,0.15);   color: #6a4020; border: 1px solid transparent; }
+
+    /* Turn indicator dot */
+    .turn-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .turn-dot.green { background: #d4a84b; }
+    .turn-dot.grey  { background: #5c3610; }
+  </style>
+</head>
+<body>
+
+  <!-- LEFT: Current -->
+  <div class="col">
+    <div class="col-label">Current</div>
+    <div class="current-header">
+      <span style="font-family:'Cinzel',serif;font-size:0.65rem;text-transform:uppercase;letter-spacing:0.1em;color:#8a6040">Games</span>
+      <span style="font-family:'Cinzel',serif;font-size:0.6rem;padding:3px 8px;border-radius:3px;background:linear-gradient(135deg,#d4a84b,#b8892a);color:#1a0800;font-weight:700;letter-spacing:0.04em">Active only</span>
+    </div>
+    <ul class="current-list">
+      <li class="current-item active">22/03/2026 · 🌐 White · active (5)</li>
+      <li class="current-item">22/03/2026 · 🌐 Waiting… · resigned (0)</li>
+      <li class="current-item">22/03/2026 · vs CPU Lvl 1 · checkmate (39)</li>
+      <li class="current-item">21/03/2026 · 🌐 Black · active (12)</li>
+      <li class="current-item">21/03/2026 · vs CPU Lvl 5 · active (44)</li>
+      <li class="current-item">21/03/2026 · 2P · active (3)</li>
+      <li class="current-item">20/03/2026 · vs CPU Lvl 5 · active (8)</li>
+    </ul>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- RIGHT: Proposed -->
+  <div class="col new-sidebar">
+    <div class="col-label">Proposed</div>
+    <div class="sidebar-header">
+      <span class="sidebar-title">Games</span>
+      <button class="filter-btn">Active only</button>
+    </div>
+
+    <div class="section-header">Your turn</div>
+
+    <!-- SVG icon definitions (reused via use) -->
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <linearGradient id="helm-g" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+          <stop offset="0%"   stop-color="#141e28"/>
+          <stop offset="30%"  stop-color="#283848"/>
+          <stop offset="55%"  stop-color="#1e2c3a"/>
+          <stop offset="80%"  stop-color="#283848"/>
+          <stop offset="100%" stop-color="#141e28"/>
+        </linearGradient>
+        <linearGradient id="helm-gold" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+          <stop offset="0%"   stop-color="#dea83a"/>
+          <stop offset="60%"  stop-color="#c8922a"/>
+          <stop offset="100%" stop-color="#9a6e18"/>
+        </linearGradient>
+
+        <symbol id="icon-helm" viewBox="0 0 32 38">
+          <path d="M6 14 C6 5 26 5 26 14" fill="#1a2430"/>
+          <rect x="5" y="13" width="22" height="21" rx="2" fill="url(#helm-g)"/>
+          <path d="M5 29 L5 34 Q5 36 7 36 L25 36 Q27 36 27 34 L27 29 Z" fill="url(#helm-g)"/>
+          <rect x="7" y="14" width="2.5" height="18" rx="1.25" fill="rgba(255,255,255,0.07)"/>
+          <rect x="5" y="12" width="22" height="3.5" fill="url(#helm-gold)"/>
+          <circle cx="8.5"  cy="13.8" r="1"   fill="#f0d060"/>
+          <circle cx="16"   cy="13.8" r="1"   fill="#f0d060"/>
+          <circle cx="23.5" cy="13.8" r="1"   fill="#f0d060"/>
+          <rect x="15" y="17" width="2" height="5.5" rx="1" fill="#c8922a"/>
+          <rect x="11.5" y="18.5" width="9" height="1.8" rx="0.9" fill="#c8922a"/>
+          <path d="M16 16 L17.2 17.5 L16 18.3 L14.8 17.5 Z" fill="#daa830"/>
+          <circle cx="11"  cy="19.4" r="1.3" fill="#c8922a"/>
+          <circle cx="21"  cy="19.4" r="1.3" fill="#c8922a"/>
+          <path d="M16 22.5 L17 21.8 L16 23.5 L15 21.8 Z" fill="#c8922a"/>
+          <rect x="5" y="24" width="22" height="2.5" fill="url(#helm-gold)"/>
+          <rect x="6" y="26.5" width="20" height="2.5" rx="0.8" fill="#060c12"/>
+          <rect x="5" y="29" width="22" height="2.5" fill="url(#helm-gold)"/>
+          <rect x="15" y="24" width="2" height="7.5" fill="#daa830"/>
+          <circle cx="8"  cy="30.3" r="0.9" fill="#f0d060"/>
+          <circle cx="24" cy="30.3" r="0.9" fill="#f0d060"/>
+        </symbol>
+      </defs>
+    </svg>
+
+    <div class="game-card active-game">
+      <div class="mode-icon"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><defs><radialGradient id="eg" cx="0.4" cy="0.38" r="0.65" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#4a6878"/><stop offset="100%" stop-color="#263848"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#eg)"/><g transform="rotate(-23.5,16,16)"><path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/><path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/><path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/><ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/><ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/></g><circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">Anna K.</span>
+          <span class="card-date">Today</span>
+        </div>
+        <div class="card-bottom">
+          <span class="turn-dot green"></span>
+          <span class="badge your-turn">Your turn</span>
+          <span class="card-moves">5 moves</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="mode-icon"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><defs><radialGradient id="eg" cx="0.4" cy="0.38" r="0.65" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#4a6878"/><stop offset="100%" stop-color="#263848"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#eg)"/><g transform="rotate(-23.5,16,16)"><path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/><path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/><path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/><ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/><ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/></g><circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">Marcus L.</span>
+          <span class="card-date">Yesterday</span>
+        </div>
+        <div class="card-bottom">
+          <span class="turn-dot green"></span>
+          <span class="badge your-turn">Your turn</span>
+          <span class="card-moves">12 moves</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="mode-icon"><svg width="18" height="18"><use href="#icon-helm"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">CPU Level 5</span>
+          <span class="card-date">Yesterday</span>
+        </div>
+        <div class="card-bottom">
+          <span class="turn-dot green"></span>
+          <span class="badge your-turn">Your turn</span>
+          <span class="card-moves">44 moves</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">Waiting</div>
+
+    <div class="game-card">
+      <div class="mode-icon"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><defs><radialGradient id="eg" cx="0.4" cy="0.38" r="0.65" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#4a6878"/><stop offset="100%" stop-color="#263848"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#eg)"/><g transform="rotate(-23.5,16,16)"><path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/><path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/><path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/><ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/><ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/></g><circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">Sara M.</span>
+          <span class="card-date">21 Mar</span>
+        </div>
+        <div class="card-bottom">
+          <span class="turn-dot grey"></span>
+          <span class="badge their-turn">Their turn</span>
+          <span class="card-moves">8 moves</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-card">
+      <div class="mode-icon"><svg width="18" height="18" viewBox="0 0 32 32" fill="none"><defs><radialGradient id="eg" cx="0.4" cy="0.38" r="0.65" gradientUnits="objectBoundingBox"><stop offset="0%" stop-color="#4a6878"/><stop offset="100%" stop-color="#263848"/></radialGradient></defs><circle cx="16" cy="16" r="15" fill="url(#eg)"/><g transform="rotate(-23.5,16,16)"><path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/><path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/><path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/><ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/><ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/></g><circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">Invite sent…</span>
+          <span class="card-date">Today</span>
+        </div>
+        <div class="card-bottom">
+          <span class="badge waiting">Waiting for opponent</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">Finished</div>
+
+    <div class="game-card">
+      <div class="mode-icon"><svg width="18" height="18"><use href="#icon-helm"/></svg></div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-opponent">CPU Level 1</span>
+          <span class="card-date">22 Mar</span>
+        </div>
+        <div class="card-bottom">
+          <span class="badge done">Checkmate · 39 moves</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

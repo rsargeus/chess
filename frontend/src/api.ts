@@ -20,6 +20,7 @@ export interface GameSummary {
   moveCount: number;
   playerColor: 'w' | 'b' | null;
   waitingForOpponent: boolean;
+  turn: 'w' | 'b';
 }
 
 export interface MoveRecord {
