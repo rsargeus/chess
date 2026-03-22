@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prototype 5 — Server Wake-up UX</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0c0c0c;
+      color: #e0e0e0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 32px 64px;
+      gap: 32px;
+    }
+
+    .page-title { font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #555; }
+
+    .demo-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .demo-btn {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.06em;
+      padding: 8px 20px;
+      border-radius: 5px;
+      border: 1px solid #5c3610;
+      background: rgba(92,54,16,0.2);
+      color: #c8a870;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .demo-btn.active {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border-color: transparent;
+      font-weight: 700;
+    }
+    .demo-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #5a4020;
+    }
+
+    .frames {
+      display: flex;
+      gap: 48px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .frame-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .frame-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #5a4020;
+    }
+
+    /* App shell */
+    .app-shell {
+      width: 560px;
+      height: 400px;
+      background: #160c04;
+      border-radius: 10px;
+      border: 1px solid #5c3610;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.8);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .shell-header {
+      padding: 10px 18px;
+      background: #1c0e04;
+      border-bottom: 1px solid #5c3610;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .shell-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .shell-spacer { flex: 1; }
+
+    /* Wake-up banner */
+    .wakeup-banner {
+      background: linear-gradient(135deg, #1e1208 0%, #160e06 100%);
+      border-bottom: 1px solid rgba(200,146,42,0.25);
+      padding: 7px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      transition: all 0.4s;
+      overflow: hidden;
+    }
+    .wakeup-banner.hidden-banner {
+      height: 0;
+      padding: 0;
+      border: none;
+      opacity: 0;
+    }
+    .banner-spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(200,146,42,0.2);
+      border-top-color: #c8922a;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      flex-shrink: 0;
+    }
+    .banner-text {
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      color: #c8a870;
+      letter-spacing: 0.04em;
+      flex: 1;
+    }
+    .banner-text span {
+      color: #7a5030;
+      font-size: 0.56rem;
+      margin-left: 6px;
+    }
+    .banner-progress-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .banner-progress {
+      width: 80px; height: 3px;
+      background: rgba(200,146,42,0.12);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .banner-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c8922a, #f0c97a);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+    .banner-pct {
+      font-family: 'Cinzel', serif;
+      font-size: 0.56rem;
+      color: #7a5030;
+      width: 28px;
+      text-align: right;
+    }
+
+    /* Body */
+    .shell-body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Sidebar */
+    .shell-sidebar {
+      width: 200px;
+      background: #1c0e04;
+      border-right: 1px solid #5c3610;
+      display: flex;
+      flex-direction: column;
+      flex-shrink: 0;
+    }
+    .sidebar-hdr {
+      padding: 8px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: #8a6040;
+      border-bottom: 1px solid #5c3610;
+    }
+
+    /* Skeleton */
+    .skel-section-hdr {
+      padding: 8px 12px 4px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.56rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #3a1e08;
+    }
+    .skel-card {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(92,54,16,0.2);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .skel-icon { width: 22px; height: 22px; border-radius: 4px; flex-shrink: 0; }
+    .skel-lines { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+    .skel {
+      border-radius: 3px;
+      background: linear-gradient(90deg, rgba(92,54,16,0.12) 25%, rgba(92,54,16,0.24) 50%, rgba(92,54,16,0.12) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    .skel-t { height: 7px; }
+    .skel-s { height: 5px; }
+    .skel-b { height: 14px; width: 52px; border-radius: 3px; }
+
+    /* Real game cards (shown when ready) */
+    .game-cards { display: none; flex-direction: column; }
+    .section-hdr {
+      padding: 8px 12px 3px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.56rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: #6a4020;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .section-hdr::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #3a1e08, transparent); }
+    .game-card {
+      padding: 9px 12px;
+      border-bottom: 1px solid rgba(92,54,16,0.35);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .game-card.active-game { background: linear-gradient(90deg, rgba(42,21,8,0.8), rgba(30,14,4,0.4)); border-left: 2px solid #c8922a; }
+    .mode-icon-sm {
+      width: 22px; height: 22px; border-radius: 4px;
+      background: rgba(92,54,16,0.2); border: 1px solid rgba(92,54,16,0.3);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .card-body { flex: 1; }
+    .card-name { font-family: 'Cinzel', serif; font-size: 0.68rem; color: #d4c0a0; }
+    .card-meta { font-family: 'Cinzel', serif; font-size: 0.56rem; color: #6a4020; margin-top: 2px; }
+    .your-turn-badge {
+      font-family: 'Cinzel', serif; font-size: 0.52rem; font-weight: 700;
+      padding: 2px 6px; border-radius: 3px;
+      background: linear-gradient(135deg, #d4a84b, #b8892a);
+      color: #1a0800;
+    }
+
+    /* Main area */
+    .shell-main {
+      flex: 1;
+      background: #160c04;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .board-placeholder {
+      width: 180px; height: 180px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      border-radius: 3px;
+      overflow: hidden;
+      opacity: 0.35;
+    }
+    .sq.l { background: #EEEED2; }
+    .sq.d { background: #769656; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <p class="page-title">Prototype 5 — Server Wake-up UX</p>
+
+  <div class="demo-controls">
+    <span class="demo-label">Simulate:</span>
+    <button class="demo-btn active" id="btn-loading" onclick="setState('loading')">Server Starting</button>
+    <button class="demo-btn" id="btn-ready" onclick="setState('ready')">Server Ready</button>
+  </div>
+
+  <div class="frames">
+    <div class="frame-wrap">
+      <div class="app-shell">
+
+        <!-- Header -->
+        <div class="shell-header">
+          <div class="shell-title">Chess</div>
+          <div class="shell-spacer"></div>
+        </div>
+
+        <!-- Wake-up banner -->
+        <div class="wakeup-banner" id="wakeup-banner">
+          <div class="banner-spinner"></div>
+          <div class="banner-text">
+            Waking up server…
+            <span>First visit takes ~30 seconds</span>
+          </div>
+          <div class="banner-progress-wrap">
+            <div class="banner-progress">
+              <div class="banner-progress-fill" id="progress-fill"></div>
+            </div>
+            <div class="banner-pct" id="progress-pct">0%</div>
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="shell-body">
+          <div class="shell-sidebar">
+            <div class="sidebar-hdr">Games</div>
+            <!-- Skeleton (loading) -->
+            <div id="skeleton-content">
+              <div class="skel-section-hdr">Your Turn</div>
+              <div class="skel-card">
+                <div class="skel skel-icon"></div>
+                <div class="skel-lines">
+                  <div class="skel skel-t" style="width:75%"></div>
+                  <div style="display:flex;gap:5px">
+                    <div class="skel skel-s" style="width:40%;flex:1"></div>
+                    <div class="skel skel-b"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="skel-card">
+                <div class="skel skel-icon"></div>
+                <div class="skel-lines">
+                  <div class="skel skel-t" style="width:60%"></div>
+                  <div style="display:flex;gap:5px">
+                    <div class="skel skel-s" style="flex:1"></div>
+                    <div class="skel skel-b"></div>
+                  </div>
+                </div>
+              </div>
+              <div class="skel-section-hdr" style="margin-top:4px">Waiting</div>
+              <div class="skel-card">
+                <div class="skel skel-icon"></div>
+                <div class="skel-lines">
+                  <div class="skel skel-t" style="width:50%"></div>
+                  <div class="skel skel-s" style="width:35%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Real content (ready) -->
+            <div class="game-cards" id="real-content">
+              <div class="section-hdr">Your Turn</div>
+              <div class="game-card active-game">
+                <div class="mode-icon-sm">🌐</div>
+                <div class="card-body">
+                  <div class="card-name">Anna K.</div>
+                  <div class="card-meta">Today · 5 moves</div>
+                </div>
+                <div class="your-turn-badge">Your Turn</div>
+              </div>
+              <div class="game-card">
+                <div class="mode-icon-sm">⚔</div>
+                <div class="card-body">
+                  <div class="card-name">AI Level 5</div>
+                  <div class="card-meta">Yesterday · 12 moves</div>
+                </div>
+                <div class="your-turn-badge">Your Turn</div>
+              </div>
+              <div class="section-hdr">Waiting</div>
+              <div class="game-card">
+                <div class="mode-icon-sm">🌐</div>
+                <div class="card-body">
+                  <div class="card-name">Marcus L.</div>
+                  <div class="card-meta">21 Mar · 8 moves</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shell-main">
+            <div class="board-placeholder" id="board"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Render board
+    const boardEl = document.getElementById('board');
+    for (let r = 0; r < 8; r++)
+      for (let f = 0; f < 8; f++) {
+        const sq = document.createElement('div');
+        sq.className = 'sq ' + ((r + f) % 2 === 0 ? 'l' : 'd');
+        boardEl.appendChild(sq);
+      }
+
+    // Progress animation
+    let progressInterval = null;
+    let currentPct = 0;
+
+    function startProgress() {
+      currentPct = 0;
+      updateProgress(0);
+      progressInterval = setInterval(() => {
+        // Slow down as it approaches 95%
+        const step = currentPct < 60 ? 1.8 : currentPct < 85 ? 0.7 : 0.2;
+        currentPct = Math.min(95, currentPct + step);
+        updateProgress(currentPct);
+      }, 500);
+    }
+
+    function updateProgress(pct) {
+      document.getElementById('progress-fill').style.width = pct + '%';
+      document.getElementById('progress-pct').textContent = Math.round(pct) + '%';
+    }
+
+    function stopProgress() {
+      clearInterval(progressInterval);
+    }
+
+    function setState(state) {
+      const isLoading = state === 'loading';
+
+      // Toggle demo buttons
+      document.getElementById('btn-loading').classList.toggle('active', isLoading);
+      document.getElementById('btn-ready').classList.toggle('active', !isLoading);
+
+      // Banner
+      document.getElementById('wakeup-banner').classList.toggle('hidden-banner', !isLoading);
+
+      // Sidebar content
+      document.getElementById('skeleton-content').style.display = isLoading ? 'block' : 'none';
+      document.getElementById('real-content').style.display = isLoading ? 'none' : 'flex';
+
+      // Progress
+      stopProgress();
+      if (isLoading) {
+        startProgress();
+      } else {
+        updateProgress(100);
+      }
+    }
+
+    // Start in loading state
+    setState('loading');
+  </script>
+</body>
+</html>

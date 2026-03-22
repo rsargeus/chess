@@ -187,6 +187,88 @@
     .turn-dot.green { background: #d4a84b; }
     .turn-dot.grey  { background: #5c3610; }
 
+    /* Wake-up banner */
+    #wakeup-banner {
+      background: linear-gradient(135deg, #1e1208 0%, #160e06 100%);
+      border-bottom: 1px solid rgba(200,146,42,0.25);
+      padding: 7px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .banner-spinner {
+      width: 13px; height: 13px;
+      border: 2px solid rgba(200,146,42,0.2);
+      border-top-color: #c8922a;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      flex-shrink: 0;
+    }
+    .banner-text {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      color: #c8a870;
+      letter-spacing: 0.04em;
+      flex: 1;
+    }
+    .banner-text span { color: #7a5030; font-size: 0.6rem; margin-left: 8px; }
+    .banner-progress-wrap { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .banner-progress {
+      width: 80px; height: 3px;
+      background: rgba(200,146,42,0.12);
+      border-radius: 2px; overflow: hidden;
+    }
+    .banner-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #c8922a, #f0c97a);
+      border-radius: 2px; width: 0%;
+      transition: width 0.5s ease;
+    }
+    .banner-pct {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem; color: #7a5030;
+      width: 28px; text-align: right;
+    }
+    #wakeup-banner.banner-error {
+      background: linear-gradient(135deg, #1e0c0c 0%, #160606 100%);
+      border-bottom-color: rgba(200,80,80,0.25);
+    }
+    #wakeup-banner.banner-error .banner-text {
+      color: #c87070;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* Skeleton loader for game list */
+    .skel-card {
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(92,54,16,0.2);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .skel-icon { width: 28px; height: 28px; border-radius: 5px; flex-shrink: 0; }
+    .skel-lines { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+    .skel {
+      border-radius: 3px;
+      background: linear-gradient(90deg, rgba(92,54,16,0.12) 25%, rgba(92,54,16,0.24) 50%, rgba(92,54,16,0.12) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s ease-in-out infinite;
+    }
+    .skel-t { height: 8px; }
+    .skel-s { height: 6px; }
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Disabled New Game button during backend wake-up */
+    #new-game-btn:disabled {
+      background: rgba(92,54,16,0.2);
+      color: #4a2e10;
+      box-shadow: none;
+      cursor: not-allowed;
+      opacity: 1;
+    }
+
     /* Main area */
     .main {
       flex: 1;
@@ -1200,6 +1282,20 @@
     </div>
     <button id="sidebar-toggle-btn">&#9776;</button>
   </header>
+
+  <div id="wakeup-banner" class="hidden">
+    <div class="banner-spinner"></div>
+    <div class="banner-text">
+      Waking up server…
+      <span>First visit may take ~30 seconds</span>
+    </div>
+    <div class="banner-progress-wrap">
+      <div class="banner-progress">
+        <div class="banner-progress-fill" id="progress-fill"></div>
+      </div>
+      <div class="banner-pct" id="progress-pct">0%</div>
+    </div>
+  </div>
 
   <div id="sidebar-overlay"></div>
   <div class="layout">

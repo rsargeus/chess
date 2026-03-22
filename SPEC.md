@@ -174,6 +174,8 @@ Rather than trusting JWT claims (which may be stale), all premium checks go thro
 
 ## Database Schema (MongoDB / Mongoose)
 
+Two collections: `games` and `moves`. There is no join — moves are fetched separately by `gameId` and merged in the application layer.
+
 ### `games` collection
 ```ts
 {
@@ -191,6 +193,15 @@ Rather than trusting JWT claims (which may be stale), all premium checks go thro
 }
 ```
 
+**Indexes:**
+- `userId` — used by `GET /games` to list a user's own games
+- `{ whiteUserId, blackUserId }` — used in multiplayer queries to find games where the user is either player
+- `inviteCode` (sparse) — used by `POST /games/join/:inviteCode` lookup
+
+**Access patterns:**
+- List all games for a user: `{ $or: [{ userId }, { whiteUserId }, { blackUserId }] }`, sorted by `createdAt` descending
+- Join by invite: `{ inviteCode }`, atomically sets `blackUserId` if null
+
 ### `moves` collection
 ```ts
 {
@@ -205,6 +216,22 @@ Rather than trusting JWT claims (which may be stale), all premium checks go thro
 }
 ```
 
+**Indexes:**
+- `{ gameId, moveNumber }` — used to fetch the full move history for a game in order
+
+**Access patterns:**
+- Full history: `{ gameId }` sorted by `moveNumber` ascending — returned as part of `GET /games/:gameId`
+- Move count: derived from `moveNumber` of the last document (used in game list summaries)
+
+### Relationships
+
+```
+games (1) ──< moves (N)
+  _id       gameId
+```
+
+The `moves` collection is append-only. The `games` document is updated in place after each move (new `fen`, new `status`, new `updatedAt`). There is no embedded move array in the game document — moves are always stored separately to keep the game document small and to avoid MongoDB's 16 MB document limit for long games.
+
 ---
 
 ## API Documentation
@@ -217,7 +244,14 @@ The OpenAPI 3.0 spec is defined in `backend/src/openapi.ts`.
 
 ## REST API
 
-All routes require a valid Auth0 JWT in the `Authorization: Bearer` header.
+All routes except `/health` require a valid Auth0 JWT in the `Authorization: Bearer` header.
+
+### `GET /health`
+Health check. No authentication required. Returns `{ "ok": true }` when the server is ready.
+
+Used by the frontend to detect Render cold starts: if the backend does not respond within 3 seconds, a "Waking up server…" banner is shown with a progress indicator. After 60 seconds without a response, the banner changes to "Server unavailable. Try refreshing."
+
+---
 
 ### `GET /me`
 Returns the authenticated user's current premium status, sourced directly from Auth0 (not JWT claims).
@@ -304,8 +338,13 @@ The frontend WebSocket client reconnects automatically after 3s on disconnect. S
 1. On load → check Auth0 session
    - Not authenticated → show login screen (hero image background, Google + email buttons)
    - `?join=<code>` in URL → save code, proceed to login, join game after auth
-   - Authenticated → show app
-2. **Lobby**: welcome image until a game starts; sidebar lists the user's games
+   - Authenticated → show app → probe backend (see below)
+2. **Backend wake-up probe**: on app load, `GET /health` is called immediately
+   - Response within 3 s → no banner shown (server already warm)
+   - No response after 3 s → "Waking up server… First visit may take ~30 seconds" banner shown below header with a progress indicator; New Game is disabled
+   - Response arrives → banner disappears, New Game re-enabled, game list loads
+   - No response after 60 s → banner changes to "Server unavailable. Try refreshing."
+3. **Lobby**: welcome image until a game starts; sidebar lists the user's games (shown as skeleton placeholders while probing)
 3. **New Game** → mode modal (Two Players / vs Computer / Online)
    - vs Computer → premium check via `/me` → payment modal if needed → level slider
    - Online → create game → show invite link modal with copy button
@@ -380,7 +419,7 @@ cd frontend && npm test
   - `FRONTEND_URL` → `https://chess-2h6.pages.dev`
   - `BACKEND_URL` → `https://chess-backend-in1l.onrender.com`
 
-> **Note:** Free tier spins down after 15 minutes of inactivity. First request after inactivity may take 30–60 seconds. Upgrade to Starter ($7/month) for always-on availability.
+> **Note:** Free tier spins down after 15 minutes of inactivity. First request after inactivity may take 30–60 seconds. The frontend handles this via the backend wake-up probe (see Frontend Behaviour). Upgrade to Starter ($7/month) for always-on availability.
 
 ### CORS
 Restricted to `FRONTEND_URL` in production. Falls back to `*` if not set (local dev only).

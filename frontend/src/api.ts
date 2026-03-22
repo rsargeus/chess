@@ -102,6 +102,13 @@ export async function joinGame(inviteCode: string): Promise<GameState> {
   return res.json();
 }
 
+export async function pingBackend(): Promise<void> {
+  const res = await fetch(`${API_BASE}/health`);
+  if (!res.ok) throw new Error('backend not ready');
+  const data = await res.json() as { ok?: boolean }; // throws if HTML returned (SPA fallback)
+  if (!data.ok) throw new Error('backend not ready');
+}
+
 export async function getMe(): Promise<{ premium: boolean }> {
   const res = await fetch(`${API_BASE}/me`, { headers: await authHeaders() });
   if (!res.ok) throw new Error('Failed to fetch user info');

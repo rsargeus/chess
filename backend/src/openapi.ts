@@ -83,6 +83,28 @@ export const openApiSpec = {
   },
   security: [{ auth0: [] }],
   paths: {
+    '/health': {
+      get: {
+        summary: 'Health check',
+        description: 'Returns 200 when the server is ready. Used by the frontend to detect cold starts (no authentication required).',
+        security: [],
+        responses: {
+          '200': {
+            description: 'Server is ready',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean', example: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
     '/me': {
       get: {
         summary: 'Get current user info',

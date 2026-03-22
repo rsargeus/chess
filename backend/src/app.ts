@@ -30,6 +30,7 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/me', jwtCheck, meRouter);
 app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);

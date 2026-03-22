@@ -47,6 +47,8 @@ const capturedPiecesEl  = document.getElementById('captured-pieces')!;
 const capturedByWhiteEl = document.getElementById('captured-by-white')!;
 const capturedByBlackEl = document.getElementById('captured-by-black')!;
 
+const wakeupBannerEl = document.getElementById('wakeup-banner')!;
+
 const overlayEl      = document.getElementById('overlay')!;
 const overlayMsg     = document.getElementById('overlay-msg')!;
 const overlayNewGame = document.getElementById('overlay-new-game')!;
@@ -670,6 +672,95 @@ async function boot(): Promise<void> {
   loginScreenEl.classList.remove('hidden');
 }
 
+// ── Backend wake-up probe ────────────────────────────────────────────────────
+let _progressInterval: ReturnType<typeof setInterval> | null = null;
+let _progressPct = 0;
+
+function _updateProgress(pct: number): void {
+  const fill = document.getElementById('progress-fill') as HTMLElement | null;
+  const label = document.getElementById('progress-pct') as HTMLElement | null;
+  if (fill)  fill.style.width = pct + '%';
+  if (label) label.textContent = Math.round(pct) + '%';
+}
+
+function _startProgress(): void {
+  _progressPct = 0;
+  _updateProgress(0);
+  _progressInterval = setInterval(() => {
+    const step = _progressPct < 60 ? 1.8 : _progressPct < 85 ? 0.7 : 0.2;
+    _progressPct = Math.min(95, _progressPct + step);
+    _updateProgress(_progressPct);
+  }, 500);
+}
+
+function _stopProgress(): void {
+  if (_progressInterval) { clearInterval(_progressInterval); _progressInterval = null; }
+}
+
+function showGameListSkeleton(): void {
+  const row = () => `<div class="skel-card">
+    <div class="skel skel-icon"></div>
+    <div class="skel-lines">
+      <div class="skel skel-t" style="width:65%"></div>
+      <div class="skel skel-s" style="width:40%"></div>
+    </div>
+  </div>`;
+  gameListEl.innerHTML = row() + row() + row();
+}
+
+async function probeBackend(): Promise<void> {
+  showGameListSkeleton();
+
+  // Show banner after 3 s if the backend hasn't responded yet
+  // (Render free tier queues requests instead of rejecting them)
+  let bannerShown = false;
+  const bannerTimer = setTimeout(() => {
+    bannerShown = true;
+    wakeupBannerEl.classList.remove('hidden');
+    newGameBtn.setAttribute('disabled', 'true');
+    _startProgress();
+  }, 3000);
+
+  try {
+    await api.pingBackend(); // may hang ~30 s on cold start
+    clearTimeout(bannerTimer);
+  } catch {
+    clearTimeout(bannerTimer);
+    // Actual failure — ensure banner is visible and retry
+    if (!bannerShown) {
+      bannerShown = true;
+      wakeupBannerEl.classList.remove('hidden');
+      newGameBtn.setAttribute('disabled', 'true');
+      _startProgress();
+    }
+    const deadline = Date.now() + 60_000;
+    let serverReady = false;
+    while (Date.now() < deadline) {
+      await new Promise<void>(r => setTimeout(r, 3000));
+      try { await api.pingBackend(); serverReady = true; break; } catch { /* keep waiting */ }
+    }
+
+    if (!serverReady) {
+      _stopProgress();
+      wakeupBannerEl.classList.add('banner-error');
+      const textEl = wakeupBannerEl.querySelector('.banner-text') as HTMLElement;
+      if (textEl) textEl.innerHTML = 'Server unavailable. Try refreshing.';
+      const spinnerEl = wakeupBannerEl.querySelector('.banner-spinner') as HTMLElement;
+      if (spinnerEl) spinnerEl.style.display = 'none';
+      const progressEl = wakeupBannerEl.querySelector('.banner-progress-wrap') as HTMLElement;
+      if (progressEl) progressEl.style.display = 'none';
+      return; // leave banner visible, button stays disabled
+    }
+  }
+
+  if (bannerShown) {
+    _stopProgress();
+    wakeupBannerEl.classList.add('hidden');
+    newGameBtn.removeAttribute('disabled');
+  }
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 async function showApp(paymentSuccess = false): Promise<void> {
   loginScreenEl.classList.add('hidden');
   appEl.classList.remove('hidden');
@@ -677,6 +768,9 @@ async function showApp(paymentSuccess = false): Promise<void> {
   if (user) {
     userNameEl.textContent = user.name ?? user.email ?? '';
   }
+
+  await probeBackend();
+
   const me = await api.getMe().catch(() => ({ premium: false }));
   premiumBadgeEl.classList.toggle('hidden', !me.premium);
   if (paymentSuccess) {
