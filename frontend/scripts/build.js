@@ -35,4 +35,9 @@ html = html.replace('/src/chess-welcome.png', '/chess-welcome.png');
 html = html.replace('/src/favicon.svg', '/favicon.svg');
 fs.writeFileSync('dist/index.html', html);
 
+// Copy privacy.html
+let privacy = fs.readFileSync('src/privacy.html', 'utf8');
+privacy = privacy.replace('/src/favicon.svg', '/favicon.svg');
+fs.writeFileSync('dist/privacy.html', privacy);
+
 console.log('Build complete → dist/');
