@@ -6,7 +6,7 @@ export const openApiSpec = {
     description:
       'REST API for a browser-based chess game. All endpoints require an Auth0 JWT.',
   },
-  servers: [{ url: 'http://localhost:3000' }],
+  servers: [{ url: process.env.BACKEND_URL ?? 'http://localhost:3000' }],
   components: {
     securitySchemes: {
       auth0: {
