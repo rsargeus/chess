@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Arena 360 — The Royal Game, Reimagined</title>
+  <meta name="description" content="Challenge friends, battle an AI, or duel locally. Chess Arena 360 — free to play, no download required."/>
+  <meta property="og:title" content="Chess Arena 360"/>
+  <meta property="og:description" content="Challenge friends, battle an AI, or duel locally. Free to play."/>
+  <meta property="og:image" content="https://chessarena360.com/image-landing.png"/>
+  <meta property="og:url" content="https://chessarena360.com"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #160c04;
+      color: #d4c0a0;
+      min-height: 100vh;
+    }
+
+    /* ── LANGUAGE ── */
+    .sv { display: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(22, 8, 4, 0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #5c3610;
+      padding: 0 32px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .lang-toggle {
+      display: flex;
+      border: 1px solid #5c3610;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .lang-btn {
+      background: none;
+      border: none;
+      padding: 5px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      color: #8a6040;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lang-btn.active {
+      background: rgba(92,54,16,0.4);
+      color: #d4a84b;
+    }
+    .nav-cta {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border: none;
+      border-radius: 4px;
+      padding: 7px 18px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      transition: opacity 0.15s;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+
+    /* ── HERO ── */
+    .hero {
+      min-height: calc(100vh - 60px);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 80px 80px 60px;
+      gap: 60px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -120px; right: -120px;
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(200,146,42,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5c3610, transparent);
+    }
+
+    .hero-text {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .hero-eyebrow {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8a6040;
+    }
+    .hero-title {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2.4rem, 4vw, 3.6rem);
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 45%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+    }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: #a08060;
+      line-height: 1.7;
+      max-width: 440px;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .badge {
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border: 1px solid #5c3610;
+      border-radius: 3px;
+      color: #8a6030;
+      background: rgba(92,54,16,0.12);
+    }
+    .hero-actions {
+      margin-top: 8px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border: none;
+      border-radius: 5px;
+      padding: 13px 28px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+      box-shadow: 0 2px 12px rgba(200,146,42,0.25);
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* ── HERO IMAGE ── */
+    .hero-illustration {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .hero-illustration img {
+      width: 420px;
+      height: 420px;
+      border-radius: 50%;
+      object-fit: cover;
+      object-position: center;
+      border: 1.5px solid #5c3610;
+      outline: 1px solid rgba(200,146,42,0.15);
+      outline-offset: 6px;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.7), 0 0 60px rgba(200,146,42,0.08);
+    }
+
+    /* ── DIVIDER ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 0 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .section-divider::before,
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5c3610);
+    }
+    .section-divider::after {
+      background: linear-gradient(90deg, #5c3610, transparent);
+    }
+    .divider-ornament {
+      font-family: 'Cinzel', serif;
+      font-size: 1.1rem;
+      color: #5c3610;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 80px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .features-header {
+      text-align: center;
+      margin-bottom: 56px;
+    }
+    .features-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #8a6040;
+      margin-bottom: 12px;
+    }
+    .features-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.9rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+    .feature-card {
+      background: #1c0e04;
+      border: 1px solid #5c3610;
+      border-radius: 8px;
+      padding: 32px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: #c8922a; }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #c8922a, transparent);
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-name {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      color: #e0c080;
+    }
+    .feature-desc {
+      font-size: 0.88rem;
+      color: #8a6850;
+      line-height: 1.7;
+      flex: 1;
+    }
+    .feature-card-cta {
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      color: #c8922a;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(92,54,16,0.3);
+      transition: color 0.15s, gap 0.15s;
+    }
+    .feature-card-cta:hover { color: #f0c97a; gap: 10px; }
+
+    /* ── CTA SECTION ── */
+    .cta-section {
+      padding: 80px;
+      text-align: center;
+      position: relative;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5c3610, transparent);
+    }
+    .cta-inner {
+      max-width: 560px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .cta-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .cta-sub {
+      font-size: 0.92rem;
+      color: #8a6850;
+      line-height: 1.7;
+    }
+    .cta-note {
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5c4020;
+      margin-top: 4px;
+    }
+    .social-proof {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      color: #7a5830;
+    }
+    .social-proof-dots { display: flex; }
+    .social-dot {
+      width: 24px; height: 24px;
+      border-radius: 50%;
+      border: 1.5px solid #1c0e04;
+      background: linear-gradient(135deg, #3a2a18, #2a1a0c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem;
+      color: #c8922a;
+      margin-left: -6px;
+    }
+    .social-dot:first-child { margin-left: 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid #5c3610;
+      padding: 28px 80px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .footer-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c8922a, #8a6030);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+    }
+    .footer-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+    }
+    .footer-link {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #5c4020;
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    .footer-link:hover { color: #c8a870; }
+    .footer-copy {
+      font-size: 0.68rem;
+      color: #3c2810;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+        padding: 48px 24px;
+        gap: 40px;
+        min-height: auto;
+      }
+      .hero-illustration { order: -1; }
+      .hero-illustration img {
+        width: 100%;
+        height: 220px;
+        border-radius: 10px;
+        object-position: center 55%;
+      }
+      .features { padding: 48px 24px; }
+      .features-grid { grid-template-columns: 1fr; gap: 16px; }
+      .cta-section { padding: 48px 24px; }
+      footer { padding: 24px; flex-direction: column; gap: 16px; text-align: center; }
+      nav { padding: 0 16px; }
+      .section-divider { padding: 0 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-logo">Chess Arena 360</span>
+    <div class="nav-right">
+      <div class="lang-toggle">
+        <button class="lang-btn active" id="btn-en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" id="btn-sv" onclick="setLang('sv')">SV</button>
+      </div>
+      <a href="https://app.chessarena360.com" class="nav-cta">
+        <span class="en">Play Now</span>
+        <span class="sv">Spela Nu</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-text">
+      <p class="hero-eyebrow">
+        <span class="en">The Royal Game, Reimagined</span>
+        <span class="sv">Det Kungliga Spelet, Återuppfunnet</span>
+      </p>
+      <h1 class="hero-title">Chess Arena 360</h1>
+      <p class="hero-sub">
+        <span class="en">Challenge friends, test your wits against an AI opponent, or face a stranger across the board. Chess as it was meant to be played.</span>
+        <span class="sv">Utmana vänner, testa ditt intellekt mot en AI-motståndare eller möt en främling över brädet. Schack som det är tänkt att spelas.</span>
+      </p>
+      <div class="hero-badges">
+        <span class="badge"><span class="en">Multiplayer</span><span class="sv">Multiplayer</span></span>
+        <span class="badge"><span class="en">AI Opponent</span><span class="sv">AI-motståndare</span></span>
+        <span class="badge"><span class="en">Free to Play</span><span class="sv">Gratis att spela</span></span>
+        <span class="badge"><span class="en">No Download</span><span class="sv">Ingen nedladdning</span></span>
+      </div>
+      <div class="hero-actions">
+        <a href="https://app.chessarena360.com" class="btn-primary">
+          <span class="en">Play for Free</span>
+          <span class="sv">Spela Gratis</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="hero-illustration">
+      <img src="image-landing.png" alt="Chess Arena 360 — Knights battle on a chessboard arena"/>
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="section-divider"><span class="divider-ornament">♔</span></div>
+
+  <!-- FEATURES -->
+  <section class="features" id="features">
+    <div class="features-header">
+      <p class="features-label">
+        <span class="en">Why Chess Arena 360</span>
+        <span class="sv">Varför Chess Arena 360</span>
+      </p>
+      <h2 class="features-title">
+        <span class="en">Three Ways to Play</span>
+        <span class="sv">Tre Sätt att Spela</span>
+      </h2>
+    </div>
+
+    <div class="features-grid">
+
+      <!-- Multiplayer -->
+      <div class="feature-card">
+        <svg width="56" height="56" viewBox="0 0 32 32" fill="none">
+          <defs>
+            <radialGradient id="eg-f1" cx="40%" cy="38%" r="65%">
+              <stop offset="0%" stop-color="#4a6878"/>
+              <stop offset="100%" stop-color="#263848"/>
+            </radialGradient>
+            <clipPath id="eg-f1-clip"><circle cx="16" cy="16" r="15"/></clipPath>
+          </defs>
+          <circle cx="16" cy="16" r="15" fill="url(#eg-f1)"/>
+          <g transform="rotate(-23.5, 16, 16)" clip-path="url(#eg-f1-clip)">
+            <path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/>
+            <path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/>
+            <path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/>
+            <ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/>
+            <ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/>
+            <ellipse cx="11" cy="10" rx="4" ry="3" fill="rgba(255,255,255,0.18)" transform="rotate(-25 11 10)"/>
+          </g>
+          <circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
+        </svg>
+        <p class="feature-name">
+          <span class="en">Online Multiplayer</span>
+          <span class="sv">Online Multiplayer</span>
+        </p>
+        <p class="feature-desc">
+          <span class="en">Challenge a friend with a simple invite link. Real-time play over a live connection — no accounts needed for guests.</span>
+          <span class="sv">Utmana en vän med en enkel inbjudningslänk. Spela i realtid — inget konto krävs för gäster.</span>
+        </p>
+        <a href="https://app.chessarena360.com" class="feature-card-cta">
+          <span class="en">Play Online →</span>
+          <span class="sv">Spela Online →</span>
+        </a>
+      </div>
+
+      <!-- AI -->
+      <div class="feature-card">
+        <svg width="48" height="57" viewBox="0 0 32 38" fill="none">
+          <defs>
+            <linearGradient id="hg-f2" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+              <stop offset="0%" stop-color="#141e28"/>
+              <stop offset="30%" stop-color="#283848"/>
+              <stop offset="55%" stop-color="#1e2c3a"/>
+              <stop offset="80%" stop-color="#283848"/>
+              <stop offset="100%" stop-color="#141e28"/>
+            </linearGradient>
+            <linearGradient id="hg-f2-gold" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+              <stop offset="0%" stop-color="#dea83a"/>
+              <stop offset="60%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <path d="M6 14 C6 5 26 5 26 14" fill="#1a2430"/>
+          <rect x="5" y="13" width="22" height="21" rx="2" fill="url(#hg-f2)"/>
+          <path d="M5 29 L5 34 Q5 36 7 36 L25 36 Q27 36 27 34 L27 29 Z" fill="url(#hg-f2)"/>
+          <rect x="7" y="14" width="2.5" height="18" rx="1.25" fill="rgba(255,255,255,0.07)"/>
+          <rect x="5" y="12" width="22" height="3.5" fill="url(#hg-f2-gold)"/>
+          <circle cx="8.5" cy="13.8" r="1" fill="#f0d060"/>
+          <circle cx="16" cy="13.8" r="1" fill="#f0d060"/>
+          <circle cx="23.5" cy="13.8" r="1" fill="#f0d060"/>
+          <rect x="15" y="17" width="2" height="5.5" rx="1" fill="#c8922a"/>
+          <rect x="11.5" y="18.5" width="9" height="1.8" rx="0.9" fill="#c8922a"/>
+          <path d="M16 16 L17.2 17.5 L16 18.3 L14.8 17.5 Z" fill="#daa830"/>
+          <circle cx="11" cy="19.4" r="1.3" fill="#c8922a"/>
+          <circle cx="21" cy="19.4" r="1.3" fill="#c8922a"/>
+          <path d="M16 22.5 L17 21.8 L16 23.5 L15 21.8 Z" fill="#c8922a"/>
+          <rect x="5" y="24" width="22" height="2.5" fill="url(#hg-f2-gold)"/>
+          <rect x="6" y="26.5" width="20" height="2.5" rx="0.8" fill="#060c12"/>
+          <rect x="5" y="29" width="22" height="2.5" fill="url(#hg-f2-gold)"/>
+          <rect x="15" y="24" width="2" height="7.5" fill="#daa830"/>
+          <circle cx="8" cy="30.3" r="0.9" fill="#f0d060"/>
+          <circle cx="24" cy="30.3" r="0.9" fill="#f0d060"/>
+        </svg>
+        <p class="feature-name">
+          <span class="en">AI Opponent</span>
+          <span class="sv">AI-motståndare</span>
+        </p>
+        <p class="feature-desc">
+          <span class="en">Train against an AI at 10 difficulty levels. From beginner-friendly to brutally challenging — sharpen your game at your own pace.</span>
+          <span class="sv">Träna mot en AI på 10 svårighetsgrader. Från nybörjarvänlig till brutalt utmanande — skärp ditt spel i din takt.</span>
+        </p>
+        <a href="https://app.chessarena360.com" class="feature-card-cta">
+          <span class="en">Challenge the AI →</span>
+          <span class="sv">Utmana AI:n →</span>
+        </a>
+      </div>
+
+      <!-- Two Players -->
+      <div class="feature-card">
+        <svg width="56" height="56" viewBox="0 0 32 32" fill="none">
+          <path d="M0 32 Q0 22 9 21 Q18 22 18 32Z" fill="#2a2a30"/>
+          <path d="M3.5 13 C3.5 5 14.5 5 14.5 13 C14.5 18.5 12 21.5 9 21.5 C6 21.5 3.5 18.5 3.5 13Z" fill="#525660"/>
+          <ellipse cx="9" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/>
+          <path d="M5.5 9.2 Q9 7.5 12.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+          <path d="M14 32 Q14 22 23 21 Q32 22 32 32Z" fill="#343438"/>
+          <path d="M17.5 13 C17.5 5 28.5 5 28.5 13 C28.5 18.5 26 21.5 23 21.5 C20 21.5 17.5 18.5 17.5 13Z" fill="#646870"/>
+          <ellipse cx="23" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/>
+          <path d="M19.5 9.2 Q23 7.5 26.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+        </svg>
+        <p class="feature-name">
+          <span class="en">Local Duel</span>
+          <span class="sv">Lokalt Duell</span>
+        </p>
+        <p class="feature-desc">
+          <span class="en">Two players, one board. Pass-and-play on the same device. The board flips automatically between turns.</span>
+          <span class="sv">Två spelare, ett bräde. Pass-and-play på samma enhet. Brädet vänds automatiskt mellan drag.</span>
+        </p>
+        <a href="https://app.chessarena360.com" class="feature-card-cta">
+          <span class="en">Start a Duel →</span>
+          <span class="sv">Starta ett Duell →</span>
+        </a>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- DIVIDER -->
+  <div class="section-divider"><span class="divider-ornament">♛</span></div>
+
+  <!-- CTA -->
+  <section class="cta-section">
+    <div class="cta-inner">
+      <h2 class="cta-title">
+        <span class="en">Ready to Play?</span>
+        <span class="sv">Redo att Spela?</span>
+      </h2>
+      <p class="cta-sub">
+        <span class="en">No download required. Create a free account and your games are saved across all your devices.</span>
+        <span class="sv">Ingen nedladdning krävs. Skapa ett gratis konto och dina spel sparas på alla dina enheter.</span>
+      </p>
+      <div class="social-proof">
+        <div class="social-proof-dots">
+          <div class="social-dot">♟</div>
+          <div class="social-dot">♟</div>
+          <div class="social-dot">♟</div>
+          <div class="social-dot">♟</div>
+          <div class="social-dot">♟</div>
+        </div>
+        <span>
+          <span class="en">Join players already on the board</span>
+          <span class="sv">Gå med spelare som redan spelar</span>
+        </span>
+      </div>
+      <a href="https://app.chessarena360.com" class="btn-primary">
+        <span class="en">Play for Free</span>
+        <span class="sv">Spela Gratis</span>
+      </a>
+      <p class="cta-note">
+        <span class="en">Free forever · No credit card required</span>
+        <span class="sv">Gratis för alltid · Inget kreditkort krävs</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <span class="footer-logo">Chess Arena 360</span>
+    <div class="footer-links">
+      <a href="https://app.chessarena360.com/privacy.html" class="footer-link">
+        <span class="en">Privacy Policy</span>
+        <span class="sv">Integritetspolicy</span>
+      </a>
+      <a href="https://app.chessarena360.com" class="footer-link">
+        <span class="en">Play</span>
+        <span class="sv">Spela</span>
+      </a>
+      <a href="https://app.chessarena360.com" class="footer-link" style="color:#c8922a">
+        <span class="en">Play for Free →</span>
+        <span class="sv">Spela Gratis →</span>
+      </a>
+    </div>
+    <span class="footer-copy">© 2025 Chess Arena 360</span>
+  </footer>
+
+  <script>
+    function setLang(lang) {
+      const isSv = lang === 'sv';
+      document.querySelectorAll('.en').forEach(el => el.style.display = isSv ? 'none' : '');
+      document.querySelectorAll('.sv').forEach(el => el.style.display = isSv ? 'inline' : '');
+      document.getElementById('btn-en').classList.toggle('active', !isSv);
+      document.getElementById('btn-sv').classList.toggle('active', isSv);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Prototype 7 — Landing Page Mobile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0c0c0c;
+      color: #e0e0e0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 24px;
+      gap: 32px;
+    }
+
+    .page-title {
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #555;
+    }
+
+    /* Phone frame */
+    .phone {
+      width: 390px;
+      background: #160c04;
+      border-radius: 44px;
+      border: 2px solid #333;
+      overflow: hidden;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+      position: relative;
+    }
+
+    /* Notch */
+    .phone-notch {
+      background: #0c0c0c;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .phone-notch::after {
+      content: '';
+      width: 120px;
+      height: 20px;
+      background: #0c0c0c;
+      border-radius: 0 0 14px 14px;
+      position: absolute;
+      top: 0;
+      border: 1px solid #222;
+      border-top: none;
+    }
+
+    /* Scrollable content */
+    .phone-screen {
+      height: 760px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      scrollbar-width: none;
+    }
+    .phone-screen::-webkit-scrollbar { display: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(22, 8, 4, 0.95);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #5c3610;
+      padding: 0 16px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.05em;
+    }
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .lang-toggle {
+      display: flex;
+      border: 1px solid #5c3610;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .lang-btn {
+      background: none;
+      border: none;
+      padding: 4px 9px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.08em;
+      color: #8a6040;
+      cursor: pointer;
+    }
+    .lang-btn.active {
+      background: rgba(92,54,16,0.4);
+      color: #d4a84b;
+    }
+    .nav-cta {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.62rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      text-decoration: none;
+    }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 32px 20px 40px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: 50%;
+      transform: translateX(-50%);
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(200,146,42,0.07) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Round hero image */
+    .hero-image {
+      width: 100%;
+      height: 220px;
+      border-radius: 10px;
+      object-fit: cover;
+      object-position: center 70%;
+      border: 1px solid #5c3610;
+      box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 40px rgba(200,146,42,0.07);
+    }
+
+    .hero-eyebrow {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8a6040;
+    }
+    .hero-title {
+      font-family: 'Cinzel', serif;
+      font-size: 2rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 45%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.04em;
+      line-height: 1.15;
+    }
+    .hero-sub {
+      font-size: 0.88rem;
+      color: #a08060;
+      line-height: 1.7;
+    }
+    .hero-badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .badge {
+      font-family: 'Cinzel', serif;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 4px 10px;
+      border: 1px solid #5c3610;
+      border-radius: 3px;
+      color: #8a6030;
+      background: rgba(92,54,16,0.12);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800;
+      border: none;
+      border-radius: 5px;
+      padding: 14px 32px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.82rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      text-decoration: none;
+      width: 100%;
+      text-align: center;
+      display: block;
+      box-shadow: 0 2px 12px rgba(200,146,42,0.25);
+    }
+
+    /* ── DIVIDER ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 0 20px;
+    }
+    .section-divider::before,
+    .section-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5c3610);
+    }
+    .section-divider::after {
+      background: linear-gradient(90deg, #5c3610, transparent);
+    }
+    .divider-ornament {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      color: #5c3610;
+    }
+
+    /* ── FEATURES ── */
+    .features {
+      padding: 32px 20px;
+    }
+    .features-header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .features-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #8a6040;
+      margin-bottom: 8px;
+    }
+    .features-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.4rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .feature-card {
+      background: #1c0e04;
+      border: 1px solid #5c3610;
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+      margin-bottom: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 2px;
+      background: linear-gradient(180deg, transparent, #c8922a, transparent);
+    }
+    .feature-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .feature-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: #e0c080;
+    }
+    .feature-desc {
+      font-size: 0.78rem;
+      color: #8a6850;
+      line-height: 1.6;
+    }
+    .feature-card-cta {
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      color: #c8922a;
+      text-decoration: none;
+      margin-top: 4px;
+    }
+
+    /* ── CTA ── */
+    .cta-section {
+      padding: 32px 20px;
+      text-align: center;
+      position: relative;
+    }
+    .cta-section::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #5c3610, transparent);
+    }
+    .cta-title {
+      font-family: 'Cinzel', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+    .cta-sub {
+      font-size: 0.82rem;
+      color: #8a6850;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+    .social-proof {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 20px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.65rem;
+      letter-spacing: 0.05em;
+      color: #7a5830;
+    }
+    .social-proof-dots { display: flex; }
+    .social-dot {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      border: 1.5px solid #1c0e04;
+      background: linear-gradient(135deg, #3a2a18, #2a1a0c);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem;
+      color: #c8922a;
+      margin-left: -5px;
+    }
+    .social-dot:first-child { margin-left: 0; }
+    .cta-note {
+      font-family: 'Cinzel', serif;
+      font-size: 0.58rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #5c4020;
+      margin-top: 12px;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid #5c3610;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      text-align: center;
+    }
+    .footer-logo {
+      font-family: 'Cinzel', serif;
+      font-size: 0.78rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #c8922a, #8a6030);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+    }
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    .footer-link {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #5c4020;
+      text-decoration: none;
+    }
+    .footer-copy {
+      font-size: 0.62rem;
+      color: #3c2810;
+    }
+
+    /* Scroll indicator */
+    .scroll-hint {
+      text-align: center;
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #3c2810;
+      padding: 8px;
+      border-top: 1px solid #1c0e04;
+    }
+  </style>
+</head>
+<body>
+
+  <p class="page-title">Prototype 7 — Landing Page Mobile (390px)</p>
+
+  <div class="phone">
+    <div class="phone-notch"></div>
+    <div class="phone-screen">
+
+      <!-- NAV -->
+      <nav>
+        <span class="nav-logo">Chess Arena 360</span>
+        <div class="nav-right">
+          <div class="lang-toggle">
+            <button class="lang-btn active">EN</button>
+            <button class="lang-btn">SV</button>
+          </div>
+          <a href="#" class="nav-cta">Play Free</a>
+        </div>
+      </nav>
+
+      <!-- HERO -->
+      <section class="hero">
+        <img class="hero-image" src="image-landing.png" alt="Chess Arena 360"/>
+        <p class="hero-eyebrow">The Royal Game, Reimagined</p>
+        <h1 class="hero-title">Chess Arena 360</h1>
+        <p class="hero-sub">Challenge friends, battle an AI, or duel on the same device. Free to play, no download needed.</p>
+        <div class="hero-badges">
+          <span class="badge">Multiplayer</span>
+          <span class="badge">AI Opponent</span>
+          <span class="badge">Free to Play</span>
+          <span class="badge">No Download</span>
+        </div>
+        <a href="#" class="btn-primary">Play for Free</a>
+      </section>
+
+      <!-- DIVIDER -->
+      <div class="section-divider"><span class="divider-ornament">♔</span></div>
+
+      <!-- FEATURES -->
+      <section class="features">
+        <div class="features-header">
+          <p class="features-label">Why Chess Arena 360</p>
+          <h2 class="features-title">Three Ways to Play</h2>
+        </div>
+
+        <div class="feature-card">
+          <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+            <defs>
+              <radialGradient id="m-eg" cx="40%" cy="38%" r="65%">
+                <stop offset="0%" stop-color="#4a6878"/>
+                <stop offset="100%" stop-color="#263848"/>
+              </radialGradient>
+              <clipPath id="m-eg-clip"><circle cx="16" cy="16" r="15"/></clipPath>
+            </defs>
+            <circle cx="16" cy="16" r="15" fill="url(#m-eg)"/>
+            <g transform="rotate(-23.5, 16, 16)" clip-path="url(#m-eg-clip)">
+              <path d="M5 10 C7 8 12 9 13 12 C14 15 11 18 10 20 C8 21 5 20 5 17 C4 14 4 12 5 10Z" fill="#4a5e48"/>
+              <path d="M10 22 C12 21 14 23 13 27 C12 30 9 31 8 28 C7 25 8 23 10 22Z" fill="#4a5e48"/>
+              <path d="M19 8 C22 7 25 9 24 13 C23 16 21 15 20 18 C19 21 20 25 18 27 C16 29 15 27 16 24 C17 21 16 18 18 14 C19 12 18 10 19 8Z" fill="#4a5e48"/>
+              <ellipse cx="16" cy="3.5" rx="6" ry="2.5" fill="rgba(255,255,255,0.72)"/>
+              <ellipse cx="16" cy="28.5" rx="4" ry="2" fill="rgba(255,255,255,0.5)"/>
+            </g>
+            <circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
+          </svg>
+          <div class="feature-card-body">
+            <p class="feature-name">Online Multiplayer</p>
+            <p class="feature-desc">Challenge a friend with a simple invite link. Real-time play — no account needed for guests.</p>
+            <a href="#" class="feature-card-cta">Play Online →</a>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <svg width="34" height="40" viewBox="0 0 32 38" fill="none">
+            <defs>
+              <linearGradient id="m-hg" x1="0" y1="0" x2="1" y2="0" gradientUnits="objectBoundingBox">
+                <stop offset="0%" stop-color="#141e28"/>
+                <stop offset="50%" stop-color="#283848"/>
+                <stop offset="100%" stop-color="#141e28"/>
+              </linearGradient>
+              <linearGradient id="m-hg-gold" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                <stop offset="0%" stop-color="#dea83a"/>
+                <stop offset="100%" stop-color="#9a6e18"/>
+              </linearGradient>
+            </defs>
+            <path d="M6 14 C6 5 26 5 26 14" fill="#1a2430"/>
+            <rect x="5" y="13" width="22" height="21" rx="2" fill="url(#m-hg)"/>
+            <rect x="5" y="12" width="22" height="3.5" fill="url(#m-hg-gold)"/>
+            <circle cx="8.5" cy="13.8" r="1" fill="#f0d060"/>
+            <circle cx="16" cy="13.8" r="1" fill="#f0d060"/>
+            <circle cx="23.5" cy="13.8" r="1" fill="#f0d060"/>
+            <rect x="15" y="17" width="2" height="5.5" rx="1" fill="#c8922a"/>
+            <rect x="11.5" y="18.5" width="9" height="1.8" rx="0.9" fill="#c8922a"/>
+            <circle cx="11" cy="19.4" r="1.3" fill="#c8922a"/>
+            <circle cx="21" cy="19.4" r="1.3" fill="#c8922a"/>
+            <rect x="5" y="24" width="22" height="2.5" fill="url(#m-hg-gold)"/>
+            <rect x="5" y="29" width="22" height="2.5" fill="url(#m-hg-gold)"/>
+            <rect x="15" y="24" width="2" height="7.5" fill="#daa830"/>
+          </svg>
+          <div class="feature-card-body">
+            <p class="feature-name">AI Opponent</p>
+            <p class="feature-desc">Train against an AI at 10 difficulty levels. Sharpen your game at your own pace.</p>
+            <a href="#" class="feature-card-cta">Challenge the AI →</a>
+          </div>
+        </div>
+
+        <div class="feature-card">
+          <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
+            <path d="M0 32 Q0 22 9 21 Q18 22 18 32Z" fill="#2a2a30"/>
+            <path d="M3.5 13 C3.5 5 14.5 5 14.5 13 C14.5 18.5 12 21.5 9 21.5 C6 21.5 3.5 18.5 3.5 13Z" fill="#525660"/>
+            <ellipse cx="9" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/>
+            <path d="M5.5 9.2 Q9 7.5 12.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+            <path d="M14 32 Q14 22 23 21 Q32 22 32 32Z" fill="#343438"/>
+            <path d="M17.5 13 C17.5 5 28.5 5 28.5 13 C28.5 18.5 26 21.5 23 21.5 C20 21.5 17.5 18.5 17.5 13Z" fill="#646870"/>
+            <ellipse cx="23" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/>
+            <path d="M19.5 9.2 Q23 7.5 26.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
+          </svg>
+          <div class="feature-card-body">
+            <p class="feature-name">Local Duel</p>
+            <p class="feature-desc">Two players, one board. Pass-and-play on the same device. Board flips automatically between turns.</p>
+            <a href="#" class="feature-card-cta">Start a Duel →</a>
+          </div>
+        </div>
+      </section>
+
+      <!-- DIVIDER -->
+      <div class="section-divider"><span class="divider-ornament">♛</span></div>
+
+      <!-- CTA -->
+      <section class="cta-section">
+        <h2 class="cta-title">Ready to Play?</h2>
+        <p class="cta-sub">No download required. Create a free account and your games are saved across all your devices.</p>
+        <div class="social-proof">
+          <div class="social-proof-dots">
+            <div class="social-dot">♟</div>
+            <div class="social-dot">♟</div>
+            <div class="social-dot">♟</div>
+            <div class="social-dot">♟</div>
+            <div class="social-dot">♟</div>
+          </div>
+          <span>Join players already on the board</span>
+        </div>
+        <a href="#" class="btn-primary">Play for Free</a>
+        <p class="cta-note">Free forever · No credit card required</p>
+      </section>
+
+      <!-- FOOTER -->
+      <footer>
+        <span class="footer-logo">Chess Arena 360</span>
+        <div class="footer-links">
+          <a href="#" class="footer-link">Privacy Policy</a>
+          <a href="#" class="footer-link">Play</a>
+          <a href="#" class="footer-link" style="color:#c8922a">Play Free →</a>
+        </div>
+        <span class="footer-copy">© 2025 Chess Arena 360</span>
+      </footer>
+
+      <div class="scroll-hint">↑ scroll to explore ↑</div>
+
+    </div>
+  </div>
+
+</body>
+</html>
