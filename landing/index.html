@@ -267,11 +267,13 @@
       padding: 32px 28px;
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 16px;
       position: relative;
       overflow: hidden;
       transition: border-color 0.2s;
     }
+    .feature-card-body { width: 100%; display: flex; flex-direction: column; gap: 16px; }
     .feature-card:hover { border-color: #c8922a; }
     .feature-card::before {
       content: '';
@@ -288,6 +290,7 @@
       font-size: 1rem;
       font-weight: 600;
       color: #e0c080;
+      text-align: center;
     }
     .feature-desc {
       font-size: 0.88rem;
@@ -430,8 +433,6 @@
       }
       .features { padding: 48px 24px; }
       .features-grid { grid-template-columns: 1fr; gap: 16px; }
-      .feature-card { flex-direction: row; align-items: flex-start; gap: 16px; }
-      .feature-card svg { flex-shrink: 0; }
       .cta-section { padding: 48px 24px; }
       footer { padding: 24px; flex-direction: column; gap: 16px; text-align: center; }
       nav { padding: 0 16px; height: auto; min-height: 52px; flex-wrap: nowrap; }
@@ -442,6 +443,10 @@
       .features-title { text-wrap: balance; }
       .cta-title { text-wrap: balance; }
       .section-divider { padding: 0 24px; }
+      .feature-card { flex-direction: row; align-items: flex-start; gap: 16px; }
+      .feature-card svg { flex-shrink: 0; margin-top: 4px; }
+      .feature-card-body { gap: 12px; }
+      .feature-name { text-align: left; }
     }
   </style>
 </head>
@@ -532,18 +537,20 @@
           </g>
           <circle cx="16" cy="16" r="15" stroke="rgba(255,255,255,0.18)" stroke-width="0.5"/>
         </svg>
-        <p class="feature-name">
-          <span class="en">Online Multiplayer</span>
-          <span class="sv">Online Multiplayer</span>
-        </p>
-        <p class="feature-desc">
-          <span class="en">Challenge a friend with a simple invite link. Real-time play over a live connection — no accounts needed for guests.</span>
-          <span class="sv">Utmana en vän med en enkel inbjudningslänk. Spela i realtid — inget konto krävs för gäster.</span>
-        </p>
-        <a href="https://app.chessarena360.com" class="feature-card-cta">
-          <span class="en">Play Online →</span>
-          <span class="sv">Spela Online →</span>
-        </a>
+        <div class="feature-card-body">
+          <p class="feature-name">
+            <span class="en">Online Multiplayer</span>
+            <span class="sv">Online Multiplayer</span>
+          </p>
+          <p class="feature-desc">
+            <span class="en">Challenge a friend with a simple invite link. Real-time play over a live connection — no accounts needed for guests.</span>
+            <span class="sv">Utmana en vän med en enkel inbjudningslänk. Spela i realtid — inget konto krävs för gäster.</span>
+          </p>
+          <a href="https://app.chessarena360.com" class="feature-card-cta">
+            <span class="en">Play Online →</span>
+            <span class="sv">Spela Online →</span>
+          </a>
+        </div>
       </div>
 
       <!-- AI -->
@@ -584,18 +591,20 @@
           <circle cx="8" cy="30.3" r="0.9" fill="#f0d060"/>
           <circle cx="24" cy="30.3" r="0.9" fill="#f0d060"/>
         </svg>
-        <p class="feature-name">
-          <span class="en">AI Opponent</span>
-          <span class="sv">AI-motståndare</span>
-        </p>
-        <p class="feature-desc">
-          <span class="en">Train against an AI at 10 difficulty levels. From beginner-friendly to brutally challenging — sharpen your game at your own pace.</span>
-          <span class="sv">Träna mot en AI på 10 svårighetsgrader. Från nybörjarvänlig till brutalt utmanande — skärp ditt spel i din takt.</span>
-        </p>
-        <a href="https://app.chessarena360.com" class="feature-card-cta">
-          <span class="en">Challenge the AI →</span>
-          <span class="sv">Utmana AI:n →</span>
-        </a>
+        <div class="feature-card-body">
+          <p class="feature-name">
+            <span class="en">AI Opponent</span>
+            <span class="sv">AI-motståndare</span>
+          </p>
+          <p class="feature-desc">
+            <span class="en">Train against an AI at 10 difficulty levels. From beginner-friendly to brutally challenging — sharpen your game at your own pace.</span>
+            <span class="sv">Träna mot en AI på 10 svårighetsgrader. Från nybörjarvänlig till brutalt utmanande — skärp ditt spel i din takt.</span>
+          </p>
+          <a href="https://app.chessarena360.com" class="feature-card-cta">
+            <span class="en">Challenge the AI →</span>
+            <span class="sv">Utmana AI:n →</span>
+          </a>
+        </div>
       </div>
 
       <!-- Two Players -->
@@ -610,18 +619,20 @@
           <ellipse cx="23" cy="12.5" rx="3.2" ry="3.8" fill="#c8a068"/>
           <path d="M19.5 9.2 Q23 7.5 26.5 9.2" stroke="#c8922a" stroke-width="0.8" fill="none" stroke-linecap="round"/>
         </svg>
-        <p class="feature-name">
-          <span class="en">Local Duel</span>
-          <span class="sv">Lokalt Duell</span>
-        </p>
-        <p class="feature-desc">
-          <span class="en">Two players, one board. Pass-and-play on the same device. The board flips automatically between turns.</span>
-          <span class="sv">Två spelare, ett bräde. Pass-and-play på samma enhet. Brädet vänds automatiskt mellan drag.</span>
-        </p>
-        <a href="https://app.chessarena360.com" class="feature-card-cta">
-          <span class="en">Start a Duel →</span>
-          <span class="sv">Starta ett Duell →</span>
-        </a>
+        <div class="feature-card-body">
+          <p class="feature-name">
+            <span class="en">Local Duel</span>
+            <span class="sv">Lokalt Duell</span>
+          </p>
+          <p class="feature-desc">
+            <span class="en">Two players, one board. Pass-and-play on the same device. The board flips automatically between turns.</span>
+            <span class="sv">Två spelare, ett bräde. Pass-and-play på samma enhet. Brädet vänds automatiskt mellan drag.</span>
+          </p>
+          <a href="https://app.chessarena360.com" class="feature-card-cta">
+            <span class="en">Start a Duel →</span>
+            <span class="sv">Starta ett Duell →</span>
+          </a>
+        </div>
       </div>
 
     </div>
