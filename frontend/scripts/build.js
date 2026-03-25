@@ -20,10 +20,18 @@ esbuild.buildSync({
 });
 
 // Copy static assets to dist/
-const imageFiles = ['src/chess-hero.png', 'src/chess-welcome.png', 'src/favicon.svg'];
+const imageFiles = ['src/chess-hero.png', 'src/chess-welcome.png', 'src/favicon.svg', 'src/sw.js'];
 for (const file of imageFiles) {
   if (fs.existsSync(file)) {
     fs.copyFileSync(file, path.join('dist', path.basename(file)));
+  }
+}
+
+// Copy public/ directory to dist/
+const publicDir = 'public';
+if (fs.existsSync(publicDir)) {
+  for (const file of fs.readdirSync(publicDir)) {
+    fs.copyFileSync(path.join(publicDir, file), path.join('dist', file));
   }
 }
 

@@ -52,7 +52,8 @@ esbuild.context({
     }
 
     // Serve static files
-    let filePath = req.url === '/' ? 'src/index.html' : req.url === '/privacy.html' ? 'src/privacy.html' : req.url.startsWith('/dist') ? req.url.slice(1) : req.url.startsWith('/src/') ? req.url.slice(1) : 'src/index.html';
+    const publicFile = `public${req.url}`;
+    let filePath = req.url === '/' ? 'src/index.html' : req.url === '/privacy.html' ? 'src/privacy.html' : req.url === '/sw.js' ? 'src/sw.js' : req.url.startsWith('/dist') ? req.url.slice(1) : req.url.startsWith('/src/') ? req.url.slice(1) : fs.existsSync(publicFile) ? publicFile : 'src/index.html';
     const ext = path.extname(filePath);
     const contentType = ext === '.js' ? 'application/javascript' : ext === '.map' ? 'application/json' : ext === '.css' ? 'text/css' : ext === '.png' ? 'image/png' : ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.svg' ? 'image/svg+xml' : 'text/html';
     try {
