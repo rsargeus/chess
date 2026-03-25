@@ -911,6 +911,264 @@
     .mute-btn:hover { color: #c8a870; border-color: #8a6040; }
     .mute-btn.muted { color: #5c3610; }
 
+    /* Profile card */
+    #profile-card {
+      width: min(70vh, 560px);
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, rgba(200,146,42,0.07) 0%, rgba(26,16,8,0.6) 100%);
+      border: 1px solid #3a2010;
+      border-radius: 10px;
+    }
+    #profile-card.hidden { display: none; }
+    .profile-avatar {
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2a1808 0%, #1a1008 100%);
+      border: 2px solid #5c3610;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      position: relative;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5), 0 0 0 3px rgba(92,54,16,0.15);
+    }
+    .profile-avatar::after {
+      content: '';
+      position: absolute;
+      inset: 2px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.07), transparent 60%);
+      pointer-events: none;
+    }
+    .profile-identity {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      min-width: 0;
+    }
+    .profile-display-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #d4b88a;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .profile-rank-badge {
+      font-family: 'Cinzel', serif;
+      font-size: 0.55rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #c8922a;
+      background: rgba(200,146,42,0.1);
+      border: 1px solid rgba(200,146,42,0.25);
+      border-radius: 3px;
+      padding: 2px 8px;
+      align-self: flex-start;
+    }
+    .profile-stats {
+      display: flex;
+      gap: 0;
+      border: 1px solid #2a1808;
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+    .profile-stat {
+      width: 64px;
+      height: 64px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .profile-stat + .profile-stat {
+      border-left: 1px solid #2a1808;
+    }
+    .profile-stat-value {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      color: #c8a870;
+    }
+    .profile-stat-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.5rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #5a3810;
+      white-space: nowrap;
+    }
+    .profile-card-divider { display: none; }
+
+    /* Profile edit modal */
+    #profile-modal .modal-body {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding: 24px 28px;
+      max-height: 70vh;
+      overflow-y: auto;
+    }
+    .profile-modal-section-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: #5a3810;
+      margin-bottom: 12px;
+    }
+    .profile-name-input {
+      width: 100%;
+      background: #0e0702;
+      border: 1px solid #5c3610;
+      border-radius: 5px;
+      color: #d4b88a;
+      font-family: system-ui, sans-serif;
+      font-size: 0.9rem;
+      padding: 9px 12px;
+      outline: none;
+    }
+    .profile-name-input:focus { border-color: #c8922a; }
+    .profile-name-input::placeholder { color: #4a2e10; }
+    .piece-picker {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .piece-col {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+    .piece-option {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #2a1808, #1a1008);
+      border: 2px solid #3a2010;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      color: #c8b890;
+      cursor: pointer;
+      transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+    }
+    .piece-option:hover {
+      border-color: #7a5030;
+      transform: translateY(-2px);
+    }
+    .piece-option.selected {
+      border-color: #c8922a;
+      box-shadow: 0 0 0 3px rgba(200,146,42,0.2);
+    }
+    .piece-option-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.52rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #5a3810;
+    }
+    .color-picker {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .color-swatch {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.1s, box-shadow 0.15s;
+      position: relative;
+    }
+    .color-swatch:hover { transform: scale(1.12); }
+    .color-swatch.selected {
+      border-color: #c8922a;
+      box-shadow: 0 0 0 3px rgba(200,146,42,0.2);
+    }
+    .color-swatch.selected::after {
+      content: '✓';
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.85);
+      font-weight: 700;
+    }
+    .profile-preview {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 14px 16px;
+      background: rgba(200,146,42,0.05);
+      border: 1px solid #3a2010;
+      border-radius: 8px;
+    }
+    .preview-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      border: 2px solid #5c3610;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.7rem;
+      color: #c8b890;
+      flex-shrink: 0;
+    }
+    .preview-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #d4b88a;
+      letter-spacing: 0.04em;
+    }
+    .preview-sub {
+      font-size: 0.65rem;
+      color: #5a3810;
+      letter-spacing: 0.04em;
+      margin-top: 3px;
+    }
+    .profile-identity-sub {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .profile-edit-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+      border: 1px solid #5c3610;
+      border-radius: 3px;
+      color: #8a6040;
+      width: 28px;
+      height: 28px;
+      padding: 0;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .profile-edit-btn:hover { color: #c8a870; border-color: #8a6040; }
+    .profile-edit-mobile { display: none; }
+
     /* Sidebar toggle button (mobile only) */
     @media (min-width: 769px) {
       #sidebar-toggle-btn { display: none !important; }
@@ -993,6 +1251,73 @@
       .panel {
         width: 100%;
         max-width: min(90vw, 440px);
+      }
+
+      #profile-card {
+        width: min(90vw, 440px);
+        flex-direction: column;
+        align-items: center;
+        padding: 24px 16px 20px;
+        gap: 0;
+        text-align: center;
+      }
+      #profile-card .profile-avatar {
+        width: 96px;
+        height: 96px;
+        font-size: 3rem;
+        margin-bottom: 16px;
+      }
+      #profile-card .profile-identity {
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      #profile-card .profile-display-name {
+        font-size: 1.3rem;
+        margin-bottom: 8px;
+      }
+      #profile-card .profile-rank-badge {
+        align-self: center;
+      }
+      #profile-card .profile-card-divider {
+        display: block;
+        width: 100%;
+        height: 1px;
+        background: #2a1808;
+        margin: 0 0 0 0;
+      }
+      #profile-card .profile-stats {
+        width: 100%;
+        border: none;
+        border-radius: 0;
+        padding: 18px 0;
+      }
+      #profile-card .profile-stat {
+        flex: 1;
+        padding: 0 8px;
+        border-left: 1px solid #2a1808;
+      }
+      #profile-card .profile-stat:first-child { border-left: none; }
+      #profile-card .profile-stat-value {
+        font-size: 1.6rem;
+      }
+      #profile-card .profile-stat-label {
+        font-size: 0.55rem;
+        margin-top: 2px;
+      }
+      #profile-card .profile-edit-desktop { display: none; }
+      .profile-preview-section { display: none; }
+      #profile-card .profile-edit-mobile {
+        display: flex;
+        width: auto;
+        height: auto;
+        padding: 8px 24px;
+        margin-top: 4px;
+        font-family: 'Cinzel', serif;
+        font-size: 0.78rem;
+        letter-spacing: 0.06em;
+      }
+      #profile-card .profile-identity-sub {
+        justify-content: center;
       }
       #move-list { max-height: 160px; }
 
@@ -1367,6 +1692,38 @@
       <div class="board-wrap empty">
         <div id="board" class="board"></div>
       </div>
+      <div id="profile-card" class="hidden">
+        <div class="profile-avatar">♛</div>
+        <div class="profile-identity">
+          <div class="profile-display-name" id="profile-name">—</div>
+          <div class="profile-identity-sub">
+            <div class="profile-rank-badge" id="profile-rank">Beginner</div>
+          </div>
+        </div>
+        <div class="profile-card-divider"></div>
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="profile-stat-games">0</div>
+            <div class="profile-stat-label">Games</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="profile-stat-minutes">—</div>
+            <div class="profile-stat-label">Time</div>
+          </div>
+          <div class="profile-stat">
+            <div class="profile-stat-value" id="profile-stat-points">—</div>
+            <div class="profile-stat-label">Points</div>
+          </div>
+        </div>
+        <button class="profile-edit-btn profile-edit-desktop" title="Edit Profile">
+          <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M10.5 1.5L13.5 4.5L5 13H2V10L10.5 1.5Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" fill="none"/>
+            <path d="M9 3L12 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="profile-card-divider"></div>
+        <button class="profile-edit-btn profile-edit-mobile" title="Edit Profile">Edit Profile</button>
+      </div>
       <div class="panel">
         <div id="status"></div>
         <div class="move-list-row">
@@ -1384,6 +1741,60 @@
         </div>
       </div>
     </main>
+  </div>
+
+  <!-- Profile edit modal -->
+  <div id="profile-modal" class="modal-backdrop hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <div class="modal-title">Edit Profile</div>
+        <div class="modal-subtitle">Choose a name and avatar</div>
+      </div>
+      <div class="modal-body">
+        <div>
+          <div class="profile-modal-section-label">Display Name</div>
+          <input id="profile-name-input" class="profile-name-input" type="text" placeholder="Your name" maxlength="30" />
+        </div>
+        <div>
+          <div class="profile-modal-section-label">Piece</div>
+          <div class="piece-picker">
+            <div class="piece-col"><button class="piece-option" data-piece="king">♔</button><div class="piece-option-name">King</div></div>
+            <div class="piece-col"><button class="piece-option" data-piece="queen">♕</button><div class="piece-option-name">Queen</div></div>
+            <div class="piece-col"><button class="piece-option" data-piece="rook">♖</button><div class="piece-option-name">Rook</div></div>
+            <div class="piece-col"><button class="piece-option" data-piece="bishop">♗</button><div class="piece-option-name">Bishop</div></div>
+            <div class="piece-col"><button class="piece-option" data-piece="knight">♘</button><div class="piece-option-name">Knight</div></div>
+            <div class="piece-col"><button class="piece-option" data-piece="pawn">♙</button><div class="piece-option-name">Pawn</div></div>
+          </div>
+        </div>
+        <div>
+          <div class="profile-modal-section-label">Color</div>
+          <div class="color-picker">
+            <button class="color-swatch" data-color="brown"  style="background:linear-gradient(135deg,#2e1a08,#1a1008)"></button>
+            <button class="color-swatch" data-color="green"  style="background:linear-gradient(135deg,#1a3a1a,#0d1a0d)"></button>
+            <button class="color-swatch" data-color="navy"   style="background:linear-gradient(135deg,#1a1a3a,#0d0d22)"></button>
+            <button class="color-swatch" data-color="purple" style="background:linear-gradient(135deg,#2e1a2e,#1a0d1a)"></button>
+            <button class="color-swatch" data-color="forest" style="background:linear-gradient(135deg,#1e2e1a,#101a0d)"></button>
+            <button class="color-swatch" data-color="wine"   style="background:linear-gradient(135deg,#3a1a1a,#1a0d0d)"></button>
+            <button class="color-swatch" data-color="teal"   style="background:linear-gradient(135deg,#1a2e2e,#0d1818)"></button>
+            <button class="color-swatch" data-color="slate"  style="background:linear-gradient(135deg,#262630,#141418)"></button>
+          </div>
+        </div>
+        <div class="profile-preview-section">
+          <div class="profile-modal-section-label">Preview</div>
+          <div class="profile-preview">
+            <div class="preview-avatar" id="preview-avatar">♕</div>
+            <div>
+              <div class="preview-name" id="preview-name">—</div>
+              <div class="preview-sub">This is how your profile appears to other players</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="profile-cancel-btn" class="btn btn-secondary">Cancel</button>
+        <button id="profile-save-btn" class="btn btn-primary">Save</button>
+      </div>
+    </div>
   </div>
 
   <!-- Game over overlay -->

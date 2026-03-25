@@ -115,6 +115,24 @@ export async function getMe(): Promise<{ premium: boolean }> {
   return res.json();
 }
 
+export interface UserProfileData { displayName: string; piece: string; color: string; }
+
+export async function getProfile(): Promise<UserProfileData | null> {
+  const res = await fetch(`${API_BASE}/me/profile`, { headers: await authHeaders() });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function saveProfile(data: UserProfileData): Promise<UserProfileData> {
+  const res = await fetch(`${API_BASE}/me/profile`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...await authHeaders() },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) throw new Error('Failed to save profile');
+  return res.json();
+}
+
 export async function createCheckoutSession(): Promise<string> {
   const res = await fetch(`${API_BASE}/checkout`, {
     method: 'POST',

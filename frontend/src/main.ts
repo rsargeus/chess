@@ -2,6 +2,7 @@ import { Board } from './board';
 import * as api from './api';
 import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
 import { playMove, playCapture, playCheck, playGameOver, unlockAudio, playLobbyMusic, stopLobbyMusic, toggleMute, isMuted, isLobbyPlaying } from './sound';
+import type { UserProfileData } from './api';
 import { connectToGame, disconnectFromGame } from './ws-client';
 
 const LEVELS: Record<number, string> = {
@@ -49,6 +50,17 @@ const capturedByWhiteEl = document.getElementById('captured-by-white')!;
 const capturedByBlackEl = document.getElementById('captured-by-black')!;
 
 const wakeupBannerEl = document.getElementById('wakeup-banner')!;
+const profileCardEl      = document.getElementById('profile-card')!;
+const profileNameEl      = document.getElementById('profile-name')!;
+const profileRankEl      = document.getElementById('profile-rank')!;
+const profileStatGamesEl = document.getElementById('profile-stat-games')!;
+const profileAvatarEl    = document.querySelector('#profile-card .profile-avatar') as HTMLElement;
+const profileModalEl     = document.getElementById('profile-modal')!;
+const profileNameInput   = document.getElementById('profile-name-input') as HTMLInputElement;
+const profileSaveBtn     = document.getElementById('profile-save-btn')!;
+const profileCancelBtn   = document.getElementById('profile-cancel-btn')!;
+const previewAvatarEl    = document.getElementById('preview-avatar')!;
+const previewNameEl      = document.getElementById('preview-name')!;
 const muteBtn      = document.getElementById('mute-btn')!;
 const muteIconOn   = document.getElementById('mute-icon-on')!;
 const muteIconOff  = document.getElementById('mute-icon-off')!;
@@ -229,6 +241,7 @@ function isFlipped(): boolean {
 
 function beginGame(state: api.GameState): void {
   stopLobbyMusic();
+  hideProfileCard();
   muteBtn.classList.add('hidden');
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
@@ -256,6 +269,7 @@ function beginGame(state: api.GameState): void {
 
 async function loadGame(gameId: string): Promise<void> {
   stopLobbyMusic();
+  hideProfileCard();
   muteBtn.classList.add('hidden');
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
@@ -496,6 +510,7 @@ function showOverlay(status: string): void {
 
 function returnToStart(): void {
   disconnectFromGame();
+  showProfileCard(userNameEl.textContent ?? '');
   muteBtn.classList.remove('hidden');
   playLobbyMusic();
   currentGameId = null;
@@ -512,6 +527,41 @@ function returnToStart(): void {
   moveListEl.innerHTML = '';
   moveListEl.classList.add('hidden');
   capturedPiecesEl.classList.add('hidden');
+}
+
+function rankFromGames(count: number): string {
+  if (count >= 51) return 'Veteran';
+  if (count >= 31) return 'Club Player';
+  if (count >= 16) return 'Casual';
+  if (count >= 6)  return 'Apprentice';
+  return 'Beginner';
+}
+
+async function updateProfileCard(name: string): Promise<void> {
+  profileNameEl.textContent = name;
+  const allGames = await api.listGames().catch(() => []);
+  const count = allGames.length;
+  profileStatGamesEl.textContent = String(count);
+  profileRankEl.textContent = rankFromGames(count);
+}
+
+function showProfileCard(name: string): void {
+  profileCardEl.classList.remove('hidden');
+  const p = loadUserProfile();
+  profileNameEl.textContent = p.displayName || name;
+  applyAvatarToCard(p.piece, p.color);
+  updateProfileCard(p.displayName || name);
+  // Sync from server in background
+  api.getProfile().then(remote => {
+    if (!remote) return;
+    cacheUserProfile({ ...remote });
+    profileNameEl.textContent = remote.displayName || name;
+    applyAvatarToCard(remote.piece, remote.color);
+  }).catch(() => {});
+}
+
+function hideProfileCard(): void {
+  profileCardEl.classList.add('hidden');
 }
 
 async function refreshGameList(): Promise<void> {
@@ -787,10 +837,12 @@ async function showApp(paymentSuccess = false): Promise<void> {
   loginScreenEl.classList.add('hidden');
   appEl.classList.remove('hidden');
   const user = await getUser();
+  const displayName = user ? (user.name ?? user.email ?? '') : '';
   if (user) {
-    userNameEl.textContent = user.name ?? user.email ?? '';
+    userNameEl.textContent = displayName;
   }
 
+  showProfileCard(displayName);
   muteBtn.classList.remove('hidden');
   playLobbyMusic();
   await probeBackend();
@@ -855,5 +907,119 @@ muteBtn.addEventListener('click', () => {
 });
 document.addEventListener('lobby-music-started', updateMuteBtn);
 updateMuteBtn();
+
+// ── Profile ───────────────────────────────────────────────────────────────────
+
+const AVATAR_PIECES: Record<string, string> = {
+  king: '♔', queen: '♕', rook: '♖', bishop: '♗', knight: '♘', pawn: '♙',
+};
+
+const COLOR_GRADIENTS: Record<string, string> = {
+  brown:  'linear-gradient(135deg,#2e1a08,#1a1008)',
+  green:  'linear-gradient(135deg,#1a3a1a,#0d1a0d)',
+  navy:   'linear-gradient(135deg,#1a1a3a,#0d0d22)',
+  purple: 'linear-gradient(135deg,#2e1a2e,#1a0d1a)',
+  forest: 'linear-gradient(135deg,#1e2e1a,#101a0d)',
+  wine:   'linear-gradient(135deg,#3a1a1a,#1a0d0d)',
+  teal:   'linear-gradient(135deg,#1a2e2e,#0d1818)',
+  slate:  'linear-gradient(135deg,#262630,#141418)',
+};
+
+interface UserProfile { displayName: string; piece: string; color: string; }
+
+function loadUserProfile(): UserProfile {
+  try {
+    const raw = localStorage.getItem('userProfile');
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { displayName: '', piece: 'queen', color: 'brown' };
+}
+
+function cacheUserProfile(p: UserProfile): void {
+  localStorage.setItem('userProfile', JSON.stringify(p));
+}
+
+function applyAvatarToCard(piece: string, color: string): void {
+  profileAvatarEl.textContent = AVATAR_PIECES[piece] ?? '♕';
+  profileAvatarEl.style.background = COLOR_GRADIENTS[color] ?? COLOR_GRADIENTS['brown'];
+}
+
+// Wire edit buttons (desktop icon + mobile text)
+document.querySelectorAll('.profile-edit-btn').forEach(btn => {
+  btn.addEventListener('click', () => openProfileModal());
+});
+
+function openProfileModal(): void {
+  const p = loadUserProfile();
+  profileNameInput.value = p.displayName;
+  selectPiece(p.piece);
+  selectColor(p.color);
+  updatePreview();
+  profileSaveBtn.textContent = 'Save';
+  profileSaveBtn.removeAttribute('disabled');
+  profileModalEl.classList.remove('hidden');
+}
+
+let modalPiece = 'queen';
+let modalColor = 'brown';
+
+function selectPiece(piece: string): void {
+  modalPiece = piece;
+  profileModalEl.querySelectorAll<HTMLElement>('.piece-option').forEach(el => {
+    el.classList.toggle('selected', el.dataset.piece === piece);
+  });
+  updatePreview();
+}
+
+function selectColor(color: string): void {
+  modalColor = color;
+  profileModalEl.querySelectorAll<HTMLElement>('.color-swatch').forEach(el => {
+    el.classList.toggle('selected', el.dataset.color === color);
+  });
+  updatePreview();
+}
+
+function updatePreview(): void {
+  previewAvatarEl.textContent = PIECE_SYMBOLS[modalPiece] ?? '♕';
+  previewAvatarEl.style.background = COLOR_GRADIENTS[modalColor] ?? COLOR_GRADIENTS['brown'];
+  previewNameEl.textContent = profileNameInput.value.trim() || '—';
+}
+
+profileModalEl.querySelectorAll<HTMLElement>('.piece-option').forEach(el => {
+  el.addEventListener('click', () => selectPiece(el.dataset.piece!));
+});
+profileModalEl.querySelectorAll<HTMLElement>('.color-swatch').forEach(el => {
+  el.addEventListener('click', () => selectColor(el.dataset.color!));
+});
+profileNameInput.addEventListener('input', updatePreview);
+
+profileSaveBtn.addEventListener('click', async () => {
+  const name = profileNameInput.value.trim();
+  const p: UserProfile = { displayName: name, piece: modalPiece, color: modalColor };
+  profileSaveBtn.textContent = 'Saving…';
+  profileSaveBtn.setAttribute('disabled', 'true');
+  try {
+    await api.saveProfile(p as UserProfileData);
+    cacheUserProfile(p);
+    applyAvatarToCard(p.piece, p.color);
+    if (name) profileNameEl.textContent = name;
+    profileModalEl.classList.add('hidden');
+  } catch (err) {
+    console.error('Failed to save profile:', err);
+    profileSaveBtn.textContent = 'Save failed — retry';
+    profileSaveBtn.removeAttribute('disabled');
+  }
+});
+
+profileCancelBtn.addEventListener('click', () => profileModalEl.classList.add('hidden'));
+profileModalEl.addEventListener('click', (e) => {
+  if (e.target === profileModalEl) profileModalEl.classList.add('hidden');
+});
+
+// Apply saved profile on load
+(function initProfile() {
+  const p = loadUserProfile();
+  applyAvatarToCard(p.piece, p.color);
+})();
 
 boot();
