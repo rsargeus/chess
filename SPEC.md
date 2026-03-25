@@ -1,8 +1,10 @@
-# Chess Web App — Technical Spec
+# Chess Arena 360 — Technical Spec
 
 ## Overview
 
-A browser-based chess game with a REST API backend, Auth0 authentication, Stockfish AI opponent, real-time multiplayer via WebSockets, Stripe payments for premium membership, and full game/move persistence in MongoDB Atlas. The frontend is plain TypeScript with no framework; the backend is Express + TypeScript.
+A browser-based chess app with a REST API backend, Auth0 authentication, Stockfish AI opponent, real-time multiplayer via WebSockets, Stripe payments for premium membership, and full game/move persistence in MongoDB Atlas. The frontend is plain TypeScript with no framework; the backend is Express + TypeScript.
+
+The app is a **Progressive Web App (PWA)** — installable on iOS and Android via the browser. A separate bilingual (EN/SV) marketing landing page is served at `chessarena360.com`; the app itself is at `app.chessarena360.com`.
 
 ---
 
@@ -22,10 +24,19 @@ A browser-based chess game with a REST API backend, Auth0 authentication, Stockf
 
 ### Frontend
 - **Plain HTML + CSS + TypeScript** (no framework)
-- **Bundler:** esbuild
+- **Bundler:** esbuild (custom `scripts/build.js` and `scripts/dev.js` — no Vite config)
 - **Auth:** `@auth0/auth0-spa-js`
 - **Chess board:** hand-rolled SVG board with cburnett-style pieces
 - **Communication:** `fetch` against the REST API + native `WebSocket` for real-time events
+- **PWA:** Web App Manifest (`public/manifest.json`), Service Worker (`src/sw.js`), PNG icons at 192 × 192 and 512 × 512
+- **Typography:** Cinzel (Google Fonts) for all headings, labels and UI chrome
+- **Visual theme:** Heraldic — dark brown background (`#160c04`), gold gradients (`#f0c97a` → `#c8922a`), warm parchment body text
+
+### Landing Page (`landing/`)
+- **Plain HTML + CSS** (no build step — deployed as-is)
+- **Bilingual:** English and Swedish (EN/SV toggle, `setLang()` in JS)
+- **Sections:** sticky nav, hero + badges, feature cards (three game modes), CTA section, footer
+- **Same visual theme** as the app (Cinzel, heraldic gold palette)
 
 ---
 
@@ -62,22 +73,35 @@ chess/
 │   └── tsconfig.json
 ├── frontend/
 │   ├── scripts/
-│   │   ├── build.js                  # esbuild production build
+│   │   ├── build.js                  # esbuild production build (also copies public/ and sw.js)
 │   │   └── dev.js                    # esbuild watch + dev server + proxy
+│   ├── public/                       # Static files copied verbatim to dist/
+│   │   ├── manifest.json             # PWA Web App Manifest
+│   │   ├── icon-192.png              # PWA icon 192×192
+│   │   ├── icon-512.png              # PWA icon 512×512
+│   │   └── icon.svg                  # PWA icon (SVG, for browsers that support it)
 │   ├── src/
 │   │   ├── index.html                # App shell + all CSS
+│   │   ├── privacy.html              # Privacy policy page
 │   │   ├── main.ts                   # App entry point, auth boot, UI logic
 │   │   ├── board.ts                  # Board rendering + click handling (supports flip)
 │   │   ├── api.ts                    # REST client (attaches JWT to every request)
 │   │   ├── auth.ts                   # Auth0 SPA client wrapper
 │   │   ├── ws-client.ts              # WebSocket client (auth, reconnect)
 │   │   ├── sound.ts                  # Move/capture/check/game-over sounds
+│   │   ├── favicon.svg               # App icon (heraldic chess king, rounded-square)
+│   │   ├── sw.js                     # Service Worker (cache-first static, network-first API)
 │   │   ├── chess-hero.png            # Login page background image
 │   │   ├── chess-welcome.png         # Lobby welcome image
 │   │   └── __tests__/
 │   │       └── api.test.ts           # Unit tests for REST client
 │   ├── package.json
 │   └── tsconfig.json
+├── landing/
+│   └── index.html                    # Marketing landing page (bilingual EN/SV, no build step)
+├── prototypes/                       # Design exploration HTML files (not deployed)
+│   ├── mood-board-heraldic.html      # Living mood board — typography, colours, components
+│   └── *.html                        # Icon and UI concept prototypes
 ├── .gitignore
 ├── CLAUDE.md
 ├── README.md
@@ -109,7 +133,7 @@ Each game stores the creator's `userId`. Multiplayer games additionally store `w
 ### `pvp` — Two Players (local)
 Pass-and-play. Both sides are controlled by humans sharing the same browser.
 
-### `vs_computer` — Player vs Computer *(Premium)*
+### `vs_computer` — AI Opponent *(Premium)*
 The human plays **White**. After each valid player move, the backend queries Stockfish for the computer's reply, applies it, and returns both moves in the response. Requires a Premium membership.
 
 #### Computer AI — Stockfish
@@ -336,7 +360,7 @@ The frontend WebSocket client reconnects automatically after 3s on disconnect. S
 ## Frontend Behaviour
 
 1. On load → check Auth0 session
-   - Not authenticated → show login screen (hero image background, Google + email buttons)
+   - Not authenticated → show login screen (hero image background, Google + email buttons, link to Privacy Policy)
    - `?join=<code>` in URL → save code, proceed to login, join game after auth
    - Authenticated → show app → probe backend (see below)
 2. **Backend wake-up probe**: on app load, `GET /health` is called immediately
@@ -345,8 +369,8 @@ The frontend WebSocket client reconnects automatically after 3s on disconnect. S
    - Response arrives → banner disappears, New Game re-enabled, game list loads
    - No response after 60 s → banner changes to "Server unavailable. Try refreshing."
 3. **Lobby**: welcome image until a game starts; sidebar lists the user's games (shown as skeleton placeholders while probing)
-3. **New Game** → mode modal (Two Players / vs Computer / Online)
-   - vs Computer → premium check via `/me` → payment modal if needed → level slider
+3. **New Game** → mode modal (Two Players / AI Opponent / Online)
+   - AI Opponent → premium check via `/me` → payment modal if needed → level slider
    - Online → create game → show invite link modal with copy button
 4. **Joining**: `?join=<code>` in URL → automatically join game after login
 5. **Board**: click piece to highlight legal moves; click destination to submit
@@ -394,9 +418,15 @@ cd frontend && npm test
 
 ## Deployment
 
-### Frontend — Cloudflare Pages
+### Landing Page — Cloudflare Pages
 
-- **URL:** https://chess-2h6.pages.dev
+- **URL:** https://chessarena360.com
+- **Source:** `landing/index.html` (no build step — deployed as static HTML)
+- **Root directory:** `landing/`
+
+### App — Cloudflare Pages
+
+- **URL:** https://app.chessarena360.com (also https://chess-2h6.pages.dev)
 - **Build command:** `npm install && node scripts/build.js`
 - **Output directory:** `dist/`
 - **Root directory:** `frontend/`
@@ -404,6 +434,14 @@ cd frontend && npm test
   - `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE`
   - `BACKEND_URL` → `https://chess-backend-in1l.onrender.com`
   - `WS_URL` is derived automatically: `BACKEND_URL` with `http` → `ws`
+
+### PWA
+The app is installable on iOS and Android. Requirements are fulfilled:
+- `public/manifest.json` — name, icons, theme color, display: standalone
+- `src/sw.js` — service worker (cache-first for static assets, network-first for API routes)
+- HTTPS — provided by Cloudflare Pages
+- iOS: users must use Safari → Share → Add to Home Screen (no automatic prompt)
+- Android (Chrome): browser shows install prompt automatically after qualifying visits
 
 ### Backend — Render (Web Service, Free tier)
 

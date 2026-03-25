@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PWA Icon Concepts — Chess Arena 360</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0c0c0c;
+      color: #d4c0a0;
+      font-family: system-ui, sans-serif;
+      padding: 48px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 64px;
+    }
+    h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: #555;
+    }
+    .concept {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+    }
+    .concept-label {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #7a5030;
+    }
+    .sizes {
+      display: flex;
+      align-items: flex-end;
+      gap: 40px;
+    }
+    .size-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+    .size-label {
+      font-size: 0.6rem;
+      letter-spacing: 0.1em;
+      color: #444;
+      font-family: monospace;
+    }
+    .divider {
+      width: 100%;
+      max-width: 700px;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #3a2008, transparent);
+    }
+  </style>
+</head>
+<body>
+
+  <h1>PWA Icon Concepts — Chess Arena 360</h1>
+
+  <!-- ── CONCEPT A: King piece on dark circle ── -->
+  <div class="concept">
+    <div class="concept-label">A — King on Circle</div>
+    <div class="sizes">
+
+      <!-- 512px -->
+      <div class="size-item">
+        <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="a-bg" cx="50%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <radialGradient id="a-glow" cx="50%" cy="42%" r="50%">
+              <stop offset="0%" stop-color="rgba(200,146,42,0.12)"/>
+              <stop offset="100%" stop-color="rgba(200,146,42,0)"/>
+            </radialGradient>
+            <linearGradient id="a-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <!-- Background circle -->
+          <circle cx="256" cy="256" r="256" fill="url(#a-bg)"/>
+          <circle cx="256" cy="256" r="256" fill="url(#a-glow)"/>
+          <!-- Border ring -->
+          <circle cx="256" cy="256" r="240" stroke="#5c3610" stroke-width="3" fill="none"/>
+          <circle cx="256" cy="256" r="228" stroke="rgba(200,146,42,0.2)" stroke-width="1" fill="none"/>
+
+          <!-- King piece SVG path, centered -->
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <!-- Cross on top -->
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#a-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#a-gold)"/>
+            <!-- Head -->
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#a-gold)"/>
+            <!-- Neck -->
+            <rect x="27" y="25" width="10" height="4" fill="url(#a-gold)"/>
+            <!-- Body -->
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#a-gold)"/>
+            <!-- Base -->
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#a-gold)"/>
+            <!-- Highlight on head -->
+            <ellipse cx="28" cy="17" rx="3" ry="2" fill="rgba(255,255,255,0.2)" transform="rotate(-20 28 17)"/>
+          </g>
+        </svg>
+        <span class="size-label">512 × 512</span>
+      </div>
+
+      <!-- 192px -->
+      <div class="size-item">
+        <svg width="192" height="192" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="a2-bg" cx="50%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <radialGradient id="a2-glow" cx="50%" cy="42%" r="50%">
+              <stop offset="0%" stop-color="rgba(200,146,42,0.12)"/>
+              <stop offset="100%" stop-color="rgba(200,146,42,0)"/>
+            </radialGradient>
+            <linearGradient id="a2-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="256" fill="url(#a2-bg)"/>
+          <circle cx="256" cy="256" r="256" fill="url(#a2-glow)"/>
+          <circle cx="256" cy="256" r="240" stroke="#5c3610" stroke-width="3" fill="none"/>
+          <circle cx="256" cy="256" r="228" stroke="rgba(200,146,42,0.2)" stroke-width="1" fill="none"/>
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#a2-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#a2-gold)"/>
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#a2-gold)"/>
+            <rect x="27" y="25" width="10" height="4" fill="url(#a2-gold)"/>
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#a2-gold)"/>
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#a2-gold)"/>
+            <ellipse cx="28" cy="17" rx="3" ry="2" fill="rgba(255,255,255,0.2)" transform="rotate(-20 28 17)"/>
+          </g>
+        </svg>
+        <span class="size-label">192 × 192</span>
+      </div>
+
+      <!-- 48px -->
+      <div class="size-item">
+        <svg width="48" height="48" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="a3-bg" cx="50%" cy="38%" r="62%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="a3-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <circle cx="256" cy="256" r="256" fill="url(#a3-bg)"/>
+          <circle cx="256" cy="256" r="240" stroke="#5c3610" stroke-width="6" fill="none"/>
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#a3-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#a3-gold)"/>
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#a3-gold)"/>
+            <rect x="27" y="25" width="10" height="4" fill="url(#a3-gold)"/>
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#a3-gold)"/>
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#a3-gold)"/>
+          </g>
+        </svg>
+        <span class="size-label">48 × 48</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── CONCEPT B: Rounded square (app icon style) ── -->
+  <div class="concept">
+    <div class="concept-label">B — Rounded Square (iOS/Android style)</div>
+    <div class="sizes">
+
+      <!-- 512px -->
+      <div class="size-item">
+        <svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <radialGradient id="b-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <radialGradient id="b-glow" cx="50%" cy="40%" r="55%">
+              <stop offset="0%" stop-color="rgba(200,146,42,0.15)"/>
+              <stop offset="100%" stop-color="rgba(200,146,42,0)"/>
+            </radialGradient>
+            <linearGradient id="b-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="b-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <!-- Rounded square background -->
+          <rect width="512" height="512" rx="112" fill="url(#b-bg)"/>
+          <rect width="512" height="512" rx="112" fill="url(#b-glow)"/>
+          <!-- Border -->
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#b-border)" stroke-width="3" fill="none"/>
+          <!-- Inner subtle border -->
+          <rect x="18" y="18" width="476" height="476" rx="98" stroke="rgba(200,146,42,0.15)" stroke-width="1" fill="none"/>
+
+          <!-- King piece, centered -->
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#b-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#b-gold)"/>
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#b-gold)"/>
+            <rect x="27" y="25" width="10" height="4" fill="url(#b-gold)"/>
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#b-gold)"/>
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#b-gold)"/>
+            <ellipse cx="28" cy="17" rx="3" ry="2" fill="rgba(255,255,255,0.22)" transform="rotate(-20 28 17)"/>
+          </g>
+        </svg>
+        <span class="size-label">512 × 512</span>
+      </div>
+
+      <!-- 192px -->
+      <div class="size-item">
+        <svg width="192" height="192" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="b2-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="b2-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="b2-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#b2-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#b2-border)" stroke-width="3" fill="none"/>
+          <rect x="18" y="18" width="476" height="476" rx="98" stroke="rgba(200,146,42,0.15)" stroke-width="1" fill="none"/>
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#b2-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#b2-gold)"/>
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#b2-gold)"/>
+            <rect x="27" y="25" width="10" height="4" fill="url(#b2-gold)"/>
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#b2-gold)"/>
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#b2-gold)"/>
+          </g>
+        </svg>
+        <span class="size-label">192 × 192</span>
+      </div>
+
+      <!-- 48px -->
+      <div class="size-item">
+        <svg width="48" height="48" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="b3-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="b3-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#b3-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="#5c3610" stroke-width="6" fill="none"/>
+          <g transform="translate(256,256) scale(5.2) translate(-32,-38)">
+            <rect x="29" y="2" width="6" height="14" rx="2" fill="url(#b3-gold)"/>
+            <rect x="24" y="5" width="16" height="5" rx="2" fill="url(#b3-gold)"/>
+            <ellipse cx="32" cy="20" rx="9" ry="7" fill="url(#b3-gold)"/>
+            <rect x="27" y="25" width="10" height="4" fill="url(#b3-gold)"/>
+            <path d="M18 29 Q18 24 27 29 L27 53 L37 53 L37 29 Q46 24 46 29 L42 56 Q32 60 22 56 Z" fill="url(#b3-gold)"/>
+            <rect x="16" y="56" width="32" height="6" rx="3" fill="url(#b3-gold)"/>
+          </g>
+        </svg>
+        <span class="size-label">48 × 48</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── CONCEPT C: Knight silhouette ── -->
+  <div class="concept">
+    <div class="concept-label">C — Knight Silhouette</div>
+    <div class="sizes">
+
+      <!-- 512px -->
+      <div class="size-item">
+        <svg width="512" height="512" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="c-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <radialGradient id="c-glow" cx="46%" cy="42%" r="45%">
+              <stop offset="0%" stop-color="rgba(200,146,42,0.18)"/>
+              <stop offset="100%" stop-color="rgba(200,146,42,0)"/>
+            </radialGradient>
+            <linearGradient id="c-gold" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="35%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="c-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#c-bg)"/>
+          <rect width="512" height="512" rx="112" fill="url(#c-glow)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#c-border)" stroke-width="3" fill="none"/>
+          <rect x="18" y="18" width="476" height="476" rx="98" stroke="rgba(200,146,42,0.15)" stroke-width="1" fill="none"/>
+
+          <!-- Knight silhouette — stylized horse head shape -->
+          <g transform="translate(256, 268) scale(1) translate(-128, -160)">
+            <!-- Base platform -->
+            <rect x="48" y="280" width="160" height="18" rx="9" fill="url(#c-gold)"/>
+            <rect x="60" y="264" width="136" height="20" rx="4" fill="url(#c-gold)"/>
+            <!-- Body/torso -->
+            <path d="M80 264 L80 200 Q78 180 90 165 Q105 148 118 140 Q108 128 106 115 Q104 100 112 90 Q120 78 132 72 Q145 66 158 68 Q172 70 180 80 Q188 90 185 104 Q182 116 172 124 Q182 130 190 142 Q200 158 198 175 Q196 192 186 204 L186 264 Z" fill="url(#c-gold)"/>
+            <!-- Head -->
+            <path d="M112 90 Q118 72 134 66 Q150 60 164 68 Q178 76 180 92 Q175 85 162 84 Q148 83 138 90 Q128 97 124 108 Q118 100 112 90 Z" fill="url(#c-gold)"/>
+            <!-- Mane accent -->
+            <path d="M106 115 Q110 104 120 96 Q132 88 144 87" stroke="rgba(255,255,255,0.2)" stroke-width="4" fill="none" stroke-linecap="round"/>
+            <!-- Eye -->
+            <circle cx="162" cy="82" r="6" fill="#160c04"/>
+            <circle cx="163" cy="81" r="2" fill="rgba(255,255,255,0.6)"/>
+            <!-- Highlight -->
+            <ellipse cx="145" cy="78" rx="8" ry="5" fill="rgba(255,255,255,0.15)" transform="rotate(-15 145 78)"/>
+          </g>
+        </svg>
+        <span class="size-label">512 × 512</span>
+      </div>
+
+      <!-- 192px -->
+      <div class="size-item">
+        <svg width="192" height="192" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="c2-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="c2-gold" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="35%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="c2-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#c2-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#c2-border)" stroke-width="3" fill="none"/>
+          <g transform="translate(256, 268) scale(1) translate(-128, -160)">
+            <rect x="48" y="280" width="160" height="18" rx="9" fill="url(#c2-gold)"/>
+            <rect x="60" y="264" width="136" height="20" rx="4" fill="url(#c2-gold)"/>
+            <path d="M80 264 L80 200 Q78 180 90 165 Q105 148 118 140 Q108 128 106 115 Q104 100 112 90 Q120 78 132 72 Q145 66 158 68 Q172 70 180 80 Q188 90 185 104 Q182 116 172 124 Q182 130 190 142 Q200 158 198 175 Q196 192 186 204 L186 264 Z" fill="url(#c2-gold)"/>
+            <path d="M112 90 Q118 72 134 66 Q150 60 164 68 Q178 76 180 92 Q175 85 162 84 Q148 83 138 90 Q128 97 124 108 Q118 100 112 90 Z" fill="url(#c2-gold)"/>
+            <circle cx="162" cy="82" r="6" fill="#160c04"/>
+            <circle cx="163" cy="81" r="2" fill="rgba(255,255,255,0.6)"/>
+          </g>
+        </svg>
+        <span class="size-label">192 × 192</span>
+      </div>
+
+      <!-- 48px -->
+      <div class="size-item">
+        <svg width="48" height="48" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="c3-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="c3-gold" x1="0.3" y1="0" x2="0.7" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#c3-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="#5c3610" stroke-width="8" fill="none"/>
+          <g transform="translate(256, 268) scale(1) translate(-128, -160)">
+            <rect x="48" y="280" width="160" height="18" rx="9" fill="url(#c3-gold)"/>
+            <rect x="60" y="264" width="136" height="20" rx="4" fill="url(#c3-gold)"/>
+            <path d="M80 264 L80 200 Q78 180 90 165 Q105 148 118 140 Q108 128 106 115 Q104 100 112 90 Q120 78 132 72 Q145 66 158 68 Q172 70 180 80 Q188 90 185 104 Q182 116 172 124 Q182 130 190 142 Q200 158 198 175 Q196 192 186 204 L186 264 Z" fill="url(#c3-gold)"/>
+            <path d="M112 90 Q118 72 134 66 Q150 60 164 68 Q178 76 180 92 Q175 85 162 84 Q148 83 138 90 Q128 97 124 108 Q118 100 112 90 Z" fill="url(#c3-gold)"/>
+          </g>
+        </svg>
+        <span class="size-label">48 × 48</span>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ── CONCEPT D: Monogram ♔ symbol ── -->
+  <div class="concept">
+    <div class="concept-label">D — Crown Symbol (simplest, clearest at small sizes)</div>
+    <div class="sizes">
+
+      <!-- 512px -->
+      <div class="size-item">
+        <svg width="512" height="512" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="d-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <radialGradient id="d-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="rgba(200,146,42,0.2)"/>
+              <stop offset="100%" stop-color="rgba(200,146,42,0)"/>
+            </radialGradient>
+            <linearGradient id="d-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="d-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#d-bg)"/>
+          <rect width="512" height="512" rx="112" fill="url(#d-glow)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#d-border)" stroke-width="3" fill="none"/>
+          <rect x="18" y="18" width="476" height="476" rx="98" stroke="rgba(200,146,42,0.15)" stroke-width="1" fill="none"/>
+
+          <!-- Crown shape -->
+          <g transform="translate(256,272)">
+            <!-- Base bar -->
+            <rect x="-130" y="72" width="260" height="36" rx="18" fill="url(#d-gold)"/>
+            <!-- Crown body trapezoid -->
+            <path d="M-120 72 L-100 -30 L100 -30 L120 72 Z" fill="url(#d-gold)"/>
+            <!-- Left point -->
+            <polygon points="-100,-30 -130,-110 -60,-30" fill="url(#d-gold)"/>
+            <!-- Center point -->
+            <polygon points="-30,-30 0,-120 30,-30" fill="url(#d-gold)"/>
+            <!-- Right point -->
+            <polygon points="60,-30 130,-110 100,-30" fill="url(#d-gold)"/>
+            <!-- Gems -->
+            <circle cx="-95" cy="-75" r="14" fill="#160c04"/>
+            <circle cx="-95" cy="-75" r="9" fill="rgba(240,201,122,0.6)"/>
+            <circle cx="0" cy="-88" r="16" fill="#160c04"/>
+            <circle cx="0" cy="-88" r="10" fill="rgba(240,201,122,0.7)"/>
+            <circle cx="95" cy="-75" r="14" fill="#160c04"/>
+            <circle cx="95" cy="-75" r="9" fill="rgba(240,201,122,0.6)"/>
+            <!-- Highlight -->
+            <ellipse cx="-40" cy="-10" rx="30" ry="12" fill="rgba(255,255,255,0.1)" transform="rotate(-5 -40 -10)"/>
+          </g>
+        </svg>
+        <span class="size-label">512 × 512</span>
+      </div>
+
+      <!-- 192px -->
+      <div class="size-item">
+        <svg width="192" height="192" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="d2-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="d2-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="40%" stop-color="#d4a84b"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+            <linearGradient id="d2-border" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#8a6030"/>
+              <stop offset="50%" stop-color="#c8922a"/>
+              <stop offset="100%" stop-color="#5c3610"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#d2-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="url(#d2-border)" stroke-width="3" fill="none"/>
+          <g transform="translate(256,272)">
+            <rect x="-130" y="72" width="260" height="36" rx="18" fill="url(#d2-gold)"/>
+            <path d="M-120 72 L-100 -30 L100 -30 L120 72 Z" fill="url(#d2-gold)"/>
+            <polygon points="-100,-30 -130,-110 -60,-30" fill="url(#d2-gold)"/>
+            <polygon points="-30,-30 0,-120 30,-30" fill="url(#d2-gold)"/>
+            <polygon points="60,-30 130,-110 100,-30" fill="url(#d2-gold)"/>
+            <circle cx="-95" cy="-75" r="14" fill="#160c04"/>
+            <circle cx="-95" cy="-75" r="9" fill="rgba(240,201,122,0.6)"/>
+            <circle cx="0" cy="-88" r="16" fill="#160c04"/>
+            <circle cx="0" cy="-88" r="10" fill="rgba(240,201,122,0.7)"/>
+            <circle cx="95" cy="-75" r="14" fill="#160c04"/>
+            <circle cx="95" cy="-75" r="9" fill="rgba(240,201,122,0.6)"/>
+          </g>
+        </svg>
+        <span class="size-label">192 × 192</span>
+      </div>
+
+      <!-- 48px -->
+      <div class="size-item">
+        <svg width="48" height="48" viewBox="0 0 512 512" fill="none">
+          <defs>
+            <radialGradient id="d3-bg" cx="50%" cy="35%" r="70%">
+              <stop offset="0%" stop-color="#2a1508"/>
+              <stop offset="100%" stop-color="#0e0602"/>
+            </radialGradient>
+            <linearGradient id="d3-gold" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#f0c97a"/>
+              <stop offset="100%" stop-color="#9a6e18"/>
+            </linearGradient>
+          </defs>
+          <rect width="512" height="512" rx="112" fill="url(#d3-bg)"/>
+          <rect x="6" y="6" width="500" height="500" rx="108" stroke="#5c3610" stroke-width="8" fill="none"/>
+          <g transform="translate(256,272)">
+            <rect x="-130" y="72" width="260" height="36" rx="18" fill="url(#d3-gold)"/>
+            <path d="M-120 72 L-100 -30 L100 -30 L120 72 Z" fill="url(#d3-gold)"/>
+            <polygon points="-100,-30 -130,-110 -60,-30" fill="url(#d3-gold)"/>
+            <polygon points="-30,-30 0,-120 30,-30" fill="url(#d3-gold)"/>
+            <polygon points="60,-30 130,-110 100,-30" fill="url(#d3-gold)"/>
+          </g>
+        </svg>
+        <span class="size-label">48 × 48</span>
+      </div>
+
+    </div>
+  </div>
+
+</body>
+</html>

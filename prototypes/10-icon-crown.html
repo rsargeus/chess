@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crown Icon Variations — Chess Arena 360</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0c0c0c;
+      color: #d4c0a0;
+      font-family: system-ui, sans-serif;
+      padding: 48px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 56px;
+    }
+    h1 { font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.2em; text-transform: uppercase; color: #555; }
+    .concept { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+    .concept-label { font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.18em; text-transform: uppercase; color: #7a5030; }
+    .concept-note { font-size: 0.68rem; color: #4a3020; letter-spacing: 0.06em; font-family: 'Cinzel', serif; }
+    .sizes { display: flex; align-items: flex-end; gap: 48px; }
+    .size-item { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .size-label { font-size: 0.58rem; letter-spacing: 0.1em; color: #3a2a18; font-family: monospace; }
+    .divider { width: 100%; max-width: 700px; height: 1px; background: linear-gradient(90deg, transparent, #3a2008, transparent); }
+  </style>
+</head>
+<body>
+
+<h1>Crown Variations — Rolex & Medieval Inspired</h1>
+
+<!-- ── A: Rolex-style, 5 balls, striped body ── -->
+<div class="concept">
+  <div class="concept-label">A — Five-ball Crown</div>
+  <div class="concept-note">Rolex-inspired — 5 orbs, geometric body with horizontal bands</div>
+  <div class="sizes">
+
+    <div class="size-item">
+      <svg width="256" height="256" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="a-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <radialGradient id="a-glow" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="rgba(200,146,42,0.2)"/><stop offset="100%" stop-color="rgba(200,146,42,0)"/></radialGradient>
+          <linearGradient id="a-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="a-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#a-bg)"/>
+        <rect width="100" height="100" rx="22" fill="url(#a-glow)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#a-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="4" y="4" width="92" height="92" rx="18.5" stroke="rgba(200,146,42,0.15)" stroke-width="0.6" fill="none"/>
+
+        <!-- 5 prongs, center tallest -->
+        <rect x="16" y="22" width="9" height="36" fill="url(#a-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#a-gold)"/>
+        <rect x="45.5" y="14" width="9" height="44" fill="url(#a-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#a-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#a-gold)"/>
+
+        <!-- Balls on prong tops -->
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#a-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#a-gold)"/>
+        <circle cx="50"   cy="10" r="7"   fill="url(#a-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#a-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#a-gold)"/>
+
+        <!-- Body -->
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#a-gold)"/>
+
+        <!-- Two horizontal dark bands -->
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+
+        <!-- Highlights on balls -->
+        <ellipse cx="17" cy="14" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.3)" transform="rotate(-20 17 14)"/>
+        <ellipse cx="47" cy="6"  rx="3"   ry="2"   fill="rgba(255,255,255,0.28)" transform="rotate(-20 47 6)"/>
+      </svg>
+      <span class="size-label">256px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="96" height="96" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="ab-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="ab-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="ab-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#ab-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#ab-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="16" y="22" width="9" height="36" fill="url(#ab-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#ab-gold)"/>
+        <rect x="45.5" y="14" width="9" height="44" fill="url(#ab-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#ab-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#ab-gold)"/>
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#ab-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#ab-gold)"/>
+        <circle cx="50"   cy="10" r="7"   fill="url(#ab-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#ab-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#ab-gold)"/>
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#ab-gold)"/>
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+      </svg>
+      <span class="size-label">96px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="ac-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="ac-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#ac-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="#5c3610" stroke-width="2" fill="none"/>
+        <rect x="16" y="22" width="9" height="36" fill="url(#ac-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#ac-gold)"/>
+        <rect x="45.5" y="14" width="9" height="44" fill="url(#ac-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#ac-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#ac-gold)"/>
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#ac-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#ac-gold)"/>
+        <circle cx="50"   cy="10" r="7"   fill="url(#ac-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#ac-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#ac-gold)"/>
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#ac-gold)"/>
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+      </svg>
+      <span class="size-label">48px</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── B: Rolex + chess cross on center orb ── -->
+<div class="concept">
+  <div class="concept-label">B — Five-ball + Chess Cross</div>
+  <div class="concept-note">Same as A — center orb marked with a chess king cross</div>
+  <div class="sizes">
+
+    <div class="size-item">
+      <svg width="256" height="256" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="b-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <radialGradient id="b-glow" cx="50%" cy="50%" r="55%"><stop offset="0%" stop-color="rgba(200,146,42,0.2)"/><stop offset="100%" stop-color="rgba(200,146,42,0)"/></radialGradient>
+          <linearGradient id="b-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="b-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#b-bg)"/>
+        <rect width="100" height="100" rx="22" fill="url(#b-glow)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#b-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="4" y="4" width="92" height="92" rx="18.5" stroke="rgba(200,146,42,0.15)" stroke-width="0.6" fill="none"/>
+
+        <rect x="16" y="22" width="9" height="36" fill="url(#b-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#b-gold)"/>
+        <rect x="45.5" y="18" width="9" height="40" fill="url(#b-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#b-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#b-gold)"/>
+
+        <!-- Side balls -->
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#b-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#b-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#b-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#b-gold)"/>
+
+        <!-- Center: cross rising above, orb at base -->
+        <rect x="48" y="4" width="4" height="14" rx="2" fill="url(#b-gold)"/>
+        <rect x="44" y="7" width="12" height="4" rx="2" fill="url(#b-gold)"/>
+        <circle cx="50" cy="20" r="7" fill="url(#b-gold)"/>
+        <!-- Dark ring on center orb -->
+        <circle cx="50" cy="20" r="4.5" fill="rgba(0,0,0,0.25)"/>
+        <circle cx="50" cy="20" r="4.5" stroke="rgba(240,201,122,0.5)" stroke-width="0.6" fill="none"/>
+
+        <!-- Body -->
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#b-gold)"/>
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+
+        <!-- Highlights -->
+        <ellipse cx="17" cy="14" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.28)" transform="rotate(-20 17 14)"/>
+        <ellipse cx="47" cy="16" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.25)" transform="rotate(-20 47 16)"/>
+      </svg>
+      <span class="size-label">256px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="96" height="96" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="bb-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="bb-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="bb-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#bb-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#bb-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="16" y="22" width="9" height="36" fill="url(#bb-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#bb-gold)"/>
+        <rect x="45.5" y="18" width="9" height="40" fill="url(#bb-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#bb-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#bb-gold)"/>
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#bb-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#bb-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#bb-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#bb-gold)"/>
+        <rect x="48" y="4" width="4" height="14" rx="2" fill="url(#bb-gold)"/>
+        <rect x="44" y="7" width="12" height="4" rx="2" fill="url(#bb-gold)"/>
+        <circle cx="50" cy="20" r="7" fill="url(#bb-gold)"/>
+        <circle cx="50" cy="20" r="4.5" fill="rgba(0,0,0,0.25)"/>
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#bb-gold)"/>
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+      </svg>
+      <span class="size-label">96px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="bc-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="bc-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#bc-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="#5c3610" stroke-width="2" fill="none"/>
+        <rect x="16" y="22" width="9" height="36" fill="url(#bc-gold)"/>
+        <rect x="30" y="28" width="9" height="30" fill="url(#bc-gold)"/>
+        <rect x="45.5" y="18" width="9" height="40" fill="url(#bc-gold)"/>
+        <rect x="61" y="28" width="9" height="30" fill="url(#bc-gold)"/>
+        <rect x="75" y="22" width="9" height="36" fill="url(#bc-gold)"/>
+        <circle cx="20.5" cy="18" r="6.5" fill="url(#bc-gold)"/>
+        <circle cx="34.5" cy="24" r="6.5" fill="url(#bc-gold)"/>
+        <circle cx="65.5" cy="24" r="6.5" fill="url(#bc-gold)"/>
+        <circle cx="79.5" cy="18" r="6.5" fill="url(#bc-gold)"/>
+        <rect x="48" y="4" width="4" height="14" rx="2" fill="url(#bc-gold)"/>
+        <rect x="44" y="7" width="12" height="4" rx="2" fill="url(#bc-gold)"/>
+        <circle cx="50" cy="20" r="7" fill="url(#bc-gold)"/>
+        <path d="M11 58 L89 58 L92 88 L8 88 Z" fill="url(#bc-gold)"/>
+        <rect x="11" y="67" width="78" height="5" fill="#100600"/>
+        <rect x="10" y="78" width="80" height="5" fill="#100600"/>
+      </svg>
+      <span class="size-label">48px</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── C: Medieval pointed crown — alternating tall/short ── -->
+<div class="concept">
+  <div class="concept-label">C — Medieval Pointed</div>
+  <div class="concept-note">9 alternating points — inspired by the ornate crown in image 2</div>
+  <div class="sizes">
+
+    <div class="size-item">
+      <svg width="256" height="256" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="c-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <radialGradient id="c-glow" cx="50%" cy="48%" r="52%"><stop offset="0%" stop-color="rgba(200,146,42,0.22)"/><stop offset="100%" stop-color="rgba(200,146,42,0)"/></radialGradient>
+          <linearGradient id="c-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="c-gold2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c8922a"/><stop offset="50%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#c8922a"/></linearGradient>
+          <linearGradient id="c-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#c-bg)"/>
+        <rect width="100" height="100" rx="22" fill="url(#c-glow)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#c-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="4" y="4" width="92" height="92" rx="18.5" stroke="rgba(200,146,42,0.15)" stroke-width="0.6" fill="none"/>
+
+        <!-- Crown band (ring base) -->
+        <path d="M9 62 Q9 57 14 57 L86 57 Q91 57 91 62 L91 80 Q91 85 86 85 L14 85 Q9 85 9 80 Z" fill="url(#c-gold)"/>
+        <!-- Inner dark band -->
+        <rect x="12" y="65" width="76" height="12" fill="#100600" rx="1"/>
+        <!-- Gem holes in band -->
+        <ellipse cx="50" cy="71" rx="5" ry="4" fill="rgba(200,146,42,0.2)" stroke="rgba(240,201,122,0.5)" stroke-width="0.8"/>
+        <ellipse cx="28" cy="71" rx="3.5" ry="3" fill="rgba(200,146,42,0.2)" stroke="rgba(240,201,122,0.4)" stroke-width="0.7"/>
+        <ellipse cx="72" cy="71" rx="3.5" ry="3" fill="rgba(200,146,42,0.2)" stroke="rgba(240,201,122,0.4)" stroke-width="0.7"/>
+        <!-- Bottom band -->
+        <rect x="9" y="82" width="82" height="6" rx="3" fill="url(#c-gold2)"/>
+
+        <!-- 5 tall points, 4 short between them -->
+        <!-- Tall point 1 (leftmost) -->
+        <polygon points="14,57 19,57 16.5,22" fill="url(#c-gold)"/>
+        <!-- Short point between 1 and 2 -->
+        <polygon points="22,57 28,57 25,40" fill="url(#c-gold)"/>
+        <!-- Tall point 2 -->
+        <polygon points="30,57 36,57 33,28" fill="url(#c-gold)"/>
+        <!-- Short point -->
+        <polygon points="38,57 44,57 41,42" fill="url(#c-gold)"/>
+        <!-- Center tall point (with cross tip) -->
+        <polygon points="46,57 54,57 50,12" fill="url(#c-gold)"/>
+        <!-- Cross at top of center point -->
+        <rect x="47.5" y="8" width="5" height="12" rx="2" fill="url(#c-gold)"/>
+        <rect x="43" y="11" width="14" height="4" rx="2" fill="url(#c-gold)"/>
+        <!-- Short point -->
+        <polygon points="56,57 62,57 59,42" fill="url(#c-gold)"/>
+        <!-- Tall point 4 -->
+        <polygon points="64,57 70,57 67,28" fill="url(#c-gold)"/>
+        <!-- Short point -->
+        <polygon points="72,57 78,57 75,40" fill="url(#c-gold)"/>
+        <!-- Tall point 5 (rightmost) -->
+        <polygon points="81,57 86,57 83.5,22" fill="url(#c-gold)"/>
+
+        <!-- Point highlights -->
+        <line x1="16.5" y1="22" x2="16" y2="50" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+        <line x1="50"   y1="12" x2="49" y2="50" stroke="rgba(255,255,255,0.15)" stroke-width="0.8"/>
+        <line x1="83.5" y1="22" x2="84" y2="50" stroke="rgba(255,255,255,0.12)" stroke-width="0.8"/>
+      </svg>
+      <span class="size-label">256px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="96" height="96" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="cb-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="cb-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="cb-gold2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c8922a"/><stop offset="50%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#c8922a"/></linearGradient>
+          <linearGradient id="cb-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#cb-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#cb-rim)" stroke-width="1.2" fill="none"/>
+        <path d="M9 62 Q9 57 14 57 L86 57 Q91 57 91 62 L91 80 Q91 85 86 85 L14 85 Q9 85 9 80 Z" fill="url(#cb-gold)"/>
+        <rect x="12" y="65" width="76" height="12" fill="#100600" rx="1"/>
+        <rect x="9" y="82" width="82" height="6" rx="3" fill="url(#cb-gold2)"/>
+        <polygon points="14,57 19,57 16.5,22" fill="url(#cb-gold)"/>
+        <polygon points="22,57 28,57 25,40" fill="url(#cb-gold)"/>
+        <polygon points="30,57 36,57 33,28" fill="url(#cb-gold)"/>
+        <polygon points="38,57 44,57 41,42" fill="url(#cb-gold)"/>
+        <polygon points="46,57 54,57 50,12" fill="url(#cb-gold)"/>
+        <rect x="47.5" y="8" width="5" height="12" rx="2" fill="url(#cb-gold)"/>
+        <rect x="43" y="11" width="14" height="4" rx="2" fill="url(#cb-gold)"/>
+        <polygon points="56,57 62,57 59,42" fill="url(#cb-gold)"/>
+        <polygon points="64,57 70,57 67,28" fill="url(#cb-gold)"/>
+        <polygon points="72,57 78,57 75,40" fill="url(#cb-gold)"/>
+        <polygon points="81,57 86,57 83.5,22" fill="url(#cb-gold)"/>
+      </svg>
+      <span class="size-label">96px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="cc-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="cc-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#cc-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="#5c3610" stroke-width="2" fill="none"/>
+        <path d="M9 62 Q9 57 14 57 L86 57 Q91 57 91 62 L91 85 Q91 88 86 88 L14 88 Q9 88 9 85 Z" fill="url(#cc-gold)"/>
+        <rect x="12" y="65" width="76" height="12" fill="#100600" rx="1"/>
+        <polygon points="14,57 19,57 16.5,22" fill="url(#cc-gold)"/>
+        <polygon points="22,57 28,57 25,40" fill="url(#cc-gold)"/>
+        <polygon points="30,57 36,57 33,28" fill="url(#cc-gold)"/>
+        <polygon points="38,57 44,57 41,42" fill="url(#cc-gold)"/>
+        <polygon points="46,57 54,57 50,12" fill="url(#cc-gold)"/>
+        <polygon points="56,57 62,57 59,42" fill="url(#cc-gold)"/>
+        <polygon points="64,57 70,57 67,28" fill="url(#cc-gold)"/>
+        <polygon points="72,57 78,57 75,40" fill="url(#cc-gold)"/>
+        <polygon points="81,57 86,57 83.5,22" fill="url(#cc-gold)"/>
+      </svg>
+      <span class="size-label">48px</span>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ── D: Hybrid — 3 tall pointed + 2 short, with balls on outer peaks ── -->
+<div class="concept">
+  <div class="concept-label">D — Hybrid: Points + Orbs</div>
+  <div class="concept-note">Outer points capped with orbs, center has a chess cross — bridging both reference images</div>
+  <div class="sizes">
+
+    <div class="size-item">
+      <svg width="256" height="256" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="d-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <radialGradient id="d-glow" cx="50%" cy="48%" r="52%"><stop offset="0%" stop-color="rgba(200,146,42,0.22)"/><stop offset="100%" stop-color="rgba(200,146,42,0)"/></radialGradient>
+          <linearGradient id="d-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="d-gold2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c8922a"/><stop offset="50%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#c8922a"/></linearGradient>
+          <linearGradient id="d-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#d-bg)"/>
+        <rect width="100" height="100" rx="22" fill="url(#d-glow)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#d-rim)" stroke-width="1.2" fill="none"/>
+        <rect x="4" y="4" width="92" height="92" rx="18.5" stroke="rgba(200,146,42,0.15)" stroke-width="0.6" fill="none"/>
+
+        <!-- Crown band -->
+        <path d="M9 63 Q9 57 14 57 L86 57 Q91 57 91 63 L91 82 Q91 88 86 88 L14 88 Q9 88 9 82 Z" fill="url(#d-gold)"/>
+        <rect x="12" y="66" width="76" height="11" fill="#100600" rx="1"/>
+        <!-- Gem details on band -->
+        <ellipse cx="50" cy="71.5" rx="5" ry="4" fill="rgba(200,146,42,0.2)" stroke="rgba(240,201,122,0.5)" stroke-width="0.8"/>
+        <ellipse cx="30" cy="71.5" rx="3" ry="2.5" fill="rgba(200,146,42,0.15)" stroke="rgba(240,201,122,0.35)" stroke-width="0.6"/>
+        <ellipse cx="70" cy="71.5" rx="3" ry="2.5" fill="rgba(200,146,42,0.15)" stroke="rgba(240,201,122,0.35)" stroke-width="0.6"/>
+        <rect x="9" y="84" width="82" height="5" rx="2.5" fill="url(#d-gold2)"/>
+
+        <!-- Left outer: slender pointed prong + ball -->
+        <rect x="13" y="27" width="8" height="30" rx="4" fill="url(#d-gold)"/>
+        <circle cx="17" cy="22" r="7" fill="url(#d-gold)"/>
+
+        <!-- Left inner: short pointed spike -->
+        <polygon points="29,57 37,57 33,40" fill="url(#d-gold)"/>
+
+        <!-- Center: tall prong with chess cross on top -->
+        <rect x="46" y="20" width="8" height="37" rx="0" fill="url(#d-gold)"/>
+        <!-- Cross -->
+        <rect x="47" y="8" width="6" height="18" rx="3" fill="url(#d-gold)"/>
+        <rect x="42" y="12" width="16" height="6" rx="3" fill="url(#d-gold)"/>
+        <!-- Orb at cross/prong junction -->
+        <circle cx="50" cy="22" r="6" fill="url(#d-gold)"/>
+        <circle cx="50" cy="22" r="3.5" fill="rgba(0,0,0,0.25)"/>
+        <circle cx="50" cy="22" r="3.5" stroke="rgba(240,201,122,0.4)" stroke-width="0.6" fill="none"/>
+
+        <!-- Right inner: short pointed spike -->
+        <polygon points="63,57 71,57 67,40" fill="url(#d-gold)"/>
+
+        <!-- Right outer: slender pointed prong + ball -->
+        <rect x="79" y="27" width="8" height="30" rx="4" fill="url(#d-gold)"/>
+        <circle cx="83" cy="22" r="7" fill="url(#d-gold)"/>
+
+        <!-- Highlights -->
+        <ellipse cx="14" cy="17" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.28)" transform="rotate(-20 14 17)"/>
+        <ellipse cx="80" cy="17" rx="2.5" ry="1.5" fill="rgba(255,255,255,0.28)" transform="rotate(-20 80 17)"/>
+        <ellipse cx="47" cy="9"  rx="2" ry="1.2" fill="rgba(255,255,255,0.22)" transform="rotate(-15 47 9)"/>
+      </svg>
+      <span class="size-label">256px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="96" height="96" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="db-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="db-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+          <linearGradient id="db-gold2" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#c8922a"/><stop offset="50%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#c8922a"/></linearGradient>
+          <linearGradient id="db-rim" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#8a6030"/><stop offset="50%" stop-color="#c8922a"/><stop offset="100%" stop-color="#5c3610"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#db-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="url(#db-rim)" stroke-width="1.2" fill="none"/>
+        <path d="M9 63 Q9 57 14 57 L86 57 Q91 57 91 63 L91 82 Q91 88 86 88 L14 88 Q9 88 9 82 Z" fill="url(#db-gold)"/>
+        <rect x="12" y="66" width="76" height="11" fill="#100600" rx="1"/>
+        <rect x="9" y="84" width="82" height="5" rx="2.5" fill="url(#db-gold2)"/>
+        <rect x="13" y="27" width="8" height="30" rx="4" fill="url(#db-gold)"/>
+        <circle cx="17" cy="22" r="7" fill="url(#db-gold)"/>
+        <polygon points="29,57 37,57 33,40" fill="url(#db-gold)"/>
+        <rect x="46" y="20" width="8" height="37" rx="0" fill="url(#db-gold)"/>
+        <rect x="47" y="8" width="6" height="18" rx="3" fill="url(#db-gold)"/>
+        <rect x="42" y="12" width="16" height="6" rx="3" fill="url(#db-gold)"/>
+        <circle cx="50" cy="22" r="6" fill="url(#db-gold)"/>
+        <circle cx="50" cy="22" r="3.5" fill="rgba(0,0,0,0.25)"/>
+        <polygon points="63,57 71,57 67,40" fill="url(#db-gold)"/>
+        <rect x="79" y="27" width="8" height="30" rx="4" fill="url(#db-gold)"/>
+        <circle cx="83" cy="22" r="7" fill="url(#db-gold)"/>
+      </svg>
+      <span class="size-label">96px</span>
+    </div>
+
+    <div class="size-item">
+      <svg width="48" height="48" viewBox="0 0 100 100" fill="none">
+        <defs>
+          <radialGradient id="dc-bg" cx="50%" cy="35%" r="70%"><stop offset="0%" stop-color="#1e0c02"/><stop offset="100%" stop-color="#0a0400"/></radialGradient>
+          <linearGradient id="dc-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c97a"/><stop offset="100%" stop-color="#7a5810"/></linearGradient>
+        </defs>
+        <rect width="100" height="100" rx="22" fill="url(#dc-bg)"/>
+        <rect x="1.5" y="1.5" width="97" height="97" rx="21" stroke="#5c3610" stroke-width="2" fill="none"/>
+        <path d="M9 63 Q9 57 14 57 L86 57 Q91 57 91 63 L91 88 L9 88 Z" fill="url(#dc-gold)"/>
+        <rect x="12" y="66" width="76" height="11" fill="#100600" rx="1"/>
+        <rect x="13" y="27" width="8" height="30" rx="4" fill="url(#dc-gold)"/>
+        <circle cx="17" cy="22" r="7" fill="url(#dc-gold)"/>
+        <polygon points="29,57 37,57 33,40" fill="url(#dc-gold)"/>
+        <rect x="46" y="20" width="8" height="37" fill="url(#dc-gold)"/>
+        <rect x="47" y="8" width="6" height="18" rx="3" fill="url(#dc-gold)"/>
+        <rect x="42" y="12" width="16" height="6" rx="3" fill="url(#dc-gold)"/>
+        <circle cx="50" cy="22" r="6" fill="url(#dc-gold)"/>
+        <polygon points="63,57 71,57 67,40" fill="url(#dc-gold)"/>
+        <rect x="79" y="27" width="8" height="30" rx="4" fill="url(#dc-gold)"/>
+        <circle cx="83" cy="22" r="7" fill="url(#dc-gold)"/>
+      </svg>
+      <span class="size-label">48px</span>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
