@@ -130,7 +130,7 @@ const PIECE_SVG: Record<string, string> = {
   </svg>`,
 };
 
-const DRAG_THRESHOLD = 4; // pixels before drag mode activates
+const DRAG_THRESHOLD = 6; // pixels before drag mode activates
 
 export class Board {
   private container: HTMLElement;
@@ -148,15 +148,16 @@ export class Board {
   private dragStartX = 0;
   private dragStartY = 0;
   private isDragging = false;
-  private boundMouseMove = this.onMouseMove.bind(this);
-  private boundMouseUp   = this.onMouseUp.bind(this);
-  private boundTouchMove = this.onTouchMove.bind(this);
-  private boundTouchEnd  = this.onTouchEnd.bind(this);
 
   constructor(container: HTMLElement, onMove: (from: SquareId, to: SquareId) => void) {
     this.container = container;
     this.chess = new Chess();
     this.onMove = onMove;
+    // Persistent pointer listeners on container (survive re-renders)
+    this.container.addEventListener('pointerdown',   this.onPointerDown.bind(this));
+    this.container.addEventListener('pointermove',   this.onPointerMove.bind(this));
+    this.container.addEventListener('pointerup',     this.onPointerUp.bind(this));
+    this.container.addEventListener('pointercancel', this.onPointerUp.bind(this));
     this.render();
   }
 
@@ -233,22 +234,69 @@ export class Board {
           cell.appendChild(wrap);
         }
 
-        if (this.interactive) {
-          cell.addEventListener('mousedown', (e) => this.onMouseDown(e, sq));
-          cell.addEventListener('touchstart', (e) => this.onTouchStart(e, sq), { passive: false });
-        }
         this.container.appendChild(cell);
       }
     }
   }
 
-  // ── Drag helpers ────────────────────────────────────────────────────────────
+  // ── Pointer events (mouse + touch unified via Pointer Events API) ────────────
 
-  private startDragTracking(clientX: number, clientY: number, sq: SquareId): void {
+  private onPointerDown(e: PointerEvent): void {
+    if (!this.interactive) return;
+    const cell = (e.target as HTMLElement).closest<HTMLElement>('[data-sq]');
+    if (!cell) return;
+    e.preventDefault();
+    this.container.setPointerCapture(e.pointerId);
+    const sq = cell.dataset.sq as SquareId;
     this.dragFrom = sq;
-    this.dragStartX = clientX;
-    this.dragStartY = clientY;
+    this.dragStartX = e.clientX;
+    this.dragStartY = e.clientY;
     this.isDragging = false;
+  }
+
+  private onPointerMove(e: PointerEvent): void {
+    if (!this.dragFrom) return;
+    const dx = e.clientX - this.dragStartX;
+    const dy = e.clientY - this.dragStartY;
+    if (!this.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+      this.activateDrag(e.clientX, e.clientY);
+    }
+    if (this.dragGhost) {
+      this.dragGhost.style.left = `${e.clientX}px`;
+      this.dragGhost.style.top  = `${e.clientY}px`;
+    }
+  }
+
+  private onPointerUp(e: PointerEvent): void {
+    const from = this.dragFrom;
+    const wasDragging = this.isDragging;
+    this.dragGhost?.remove();
+    this.dragGhost = null;
+    this.dragFrom = null;
+    this.isDragging = false;
+    if (!from) return;
+
+    if (wasDragging) {
+      // Release capture so elementFromPoint works
+      if (this.container.hasPointerCapture(e.pointerId)) {
+        this.container.releasePointerCapture(e.pointerId);
+      }
+      if (this.dragGhost) this.dragGhost.style.display = 'none';
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const targetCell = el?.closest<HTMLElement>('[data-sq]');
+      const to = targetCell?.dataset.sq as SquareId | undefined;
+      if (to && this.highlights.has(to)) {
+        this.selected = null;
+        this.highlights = new Set();
+        this.onMove(from, to);
+      } else {
+        this.selected = null;
+        this.highlights = new Set();
+        this.render();
+      }
+    } else {
+      this.handleClick(from);
+    }
   }
 
   private activateDrag(clientX: number, clientY: number): void {
@@ -263,127 +311,26 @@ export class Board {
     this.highlights = new Set(moves.map((m) => m.to as SquareId));
     this.render();
 
-    // Create ghost
-    const sq = this.container.querySelector<HTMLElement>(`[data-sq="${this.dragFrom}"]`);
-    const pieceEl = sq?.querySelector('.piece');
+    // Create ghost piece
+    const cell = this.container.querySelector<HTMLElement>(`[data-sq="${this.dragFrom}"]`);
+    const pieceEl = cell?.querySelector('.piece');
     if (!pieceEl) return;
-
-    const rect = sq!.getBoundingClientRect();
+    const rect = cell!.getBoundingClientRect();
     this.dragGhost = document.createElement('div');
     this.dragGhost.className = 'drag-ghost';
     this.dragGhost.innerHTML = pieceEl.innerHTML;
     this.dragGhost.style.cssText = `
       position: fixed;
-      width: ${rect.width}px;
-      height: ${rect.height}px;
+      width: ${rect.width * 1.2}px;
+      height: ${rect.height * 1.2}px;
       pointer-events: none;
       z-index: 9999;
-      opacity: 0.9;
-      transform: translate(-50%, -50%);
+      opacity: 0.92;
+      transform: translate(-50%, -80%);
       left: ${clientX}px;
       top: ${clientY}px;
     `;
     document.body.appendChild(this.dragGhost);
-  }
-
-  private moveDragGhost(clientX: number, clientY: number): void {
-    if (!this.dragGhost) return;
-    this.dragGhost.style.left = `${clientX}px`;
-    this.dragGhost.style.top = `${clientY}px`;
-  }
-
-  private sqFromPoint(clientX: number, clientY: number): SquareId | null {
-    // Temporarily hide ghost so elementFromPoint sees the board
-    if (this.dragGhost) this.dragGhost.style.display = 'none';
-    const el = document.elementFromPoint(clientX, clientY);
-    if (this.dragGhost) this.dragGhost.style.display = '';
-    const cell = el?.closest<HTMLElement>('[data-sq]');
-    return (cell?.dataset.sq as SquareId) ?? null;
-  }
-
-  private endDrag(clientX: number, clientY: number): void {
-    const from = this.dragFrom;
-    const wasDragging = this.isDragging;
-
-    // Clean up ghost
-    this.dragGhost?.remove();
-    this.dragGhost = null;
-    this.dragFrom = null;
-    this.isDragging = false;
-
-    document.removeEventListener('mousemove', this.boundMouseMove);
-    document.removeEventListener('mouseup',   this.boundMouseUp);
-    document.removeEventListener('touchmove', this.boundTouchMove);
-    document.removeEventListener('touchend',  this.boundTouchEnd);
-
-    if (!from) return;
-
-    if (wasDragging) {
-      const to = this.sqFromPoint(clientX, clientY);
-      if (to && this.highlights.has(to)) {
-        this.selected = null;
-        this.highlights = new Set();
-        this.onMove(from, to);
-      } else {
-        this.selected = null;
-        this.highlights = new Set();
-        this.render();
-      }
-    } else {
-      // Treat as click
-      this.handleClick(from);
-    }
-  }
-
-  // ── Mouse events ─────────────────────────────────────────────────────────────
-
-  private onMouseDown(e: MouseEvent, sq: SquareId): void {
-    e.preventDefault();
-    this.startDragTracking(e.clientX, e.clientY, sq);
-    document.addEventListener('mousemove', this.boundMouseMove);
-    document.addEventListener('mouseup',   this.boundMouseUp);
-  }
-
-  private onMouseMove(e: MouseEvent): void {
-    if (!this.dragFrom) return;
-    const dx = e.clientX - this.dragStartX;
-    const dy = e.clientY - this.dragStartY;
-    if (!this.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-      this.activateDrag(e.clientX, e.clientY);
-    }
-    this.moveDragGhost(e.clientX, e.clientY);
-  }
-
-  private onMouseUp(e: MouseEvent): void {
-    this.endDrag(e.clientX, e.clientY);
-  }
-
-  // ── Touch events ─────────────────────────────────────────────────────────────
-
-  private onTouchStart(e: TouchEvent, sq: SquareId): void {
-    if (e.touches.length !== 1) return;
-    e.preventDefault();
-    const t = e.touches[0];
-    this.startDragTracking(t.clientX, t.clientY, sq);
-    document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
-    document.addEventListener('touchend',  this.boundTouchEnd);
-  }
-
-  private onTouchMove(e: TouchEvent): void {
-    e.preventDefault();
-    if (!this.dragFrom || e.touches.length !== 1) return;
-    const t = e.touches[0];
-    const dx = t.clientX - this.dragStartX;
-    const dy = t.clientY - this.dragStartY;
-    if (!this.isDragging && Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-      this.activateDrag(t.clientX, t.clientY);
-    }
-    this.moveDragGhost(t.clientX, t.clientY);
-  }
-
-  private onTouchEnd(e: TouchEvent): void {
-    const t = e.changedTouches[0];
-    this.endDrag(t.clientX, t.clientY);
   }
 
   // ── Click (fallback from drag) ────────────────────────────────────────────────
