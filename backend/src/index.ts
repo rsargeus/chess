@@ -3,6 +3,13 @@ import { connectDB } from './db';
 import { initEngine, destroyEngine } from './stockfish';
 import { initWebSocketServer } from './wsServer';
 
+const REQUIRED_ENV = ['AUTH0_DOMAIN', 'AUTH0_AUDIENCE', 'MONGODB_URI'];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error(`Missing required environment variables: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
 const PORT = process.env.PORT ?? 3000;
 
 async function start() {

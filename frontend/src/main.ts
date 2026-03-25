@@ -26,6 +26,7 @@ let moveHistory: string[] = [];
 let moveRecords: api.MoveRecord[] = [];
 let viewIndex = 0;
 let currentPlayerColor: 'w' | 'b' | null = null; // null = not multiplayer
+let submittingMove = false;
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -48,6 +49,7 @@ const navFwdBtn      = document.getElementById('nav-fwd-btn')!;
 const capturedPiecesEl  = document.getElementById('captured-pieces')!;
 const capturedByWhiteEl = document.getElementById('captured-by-white')!;
 const capturedByBlackEl = document.getElementById('captured-by-black')!;
+const panelEl           = document.querySelector<HTMLElement>('.panel')!;
 
 const wakeupBannerEl = document.getElementById('wakeup-banner')!;
 const profileCardEl      = document.getElementById('profile-card')!;
@@ -140,8 +142,8 @@ function showInviteModal(inviteCode: string): void {
     inviteCopyBtn.removeEventListener('click', onCopy);
     inviteCloseBtn.removeEventListener('click', onClose);
   };
-  inviteCopyBtn.addEventListener('click', onCopy);
-  inviteCloseBtn.addEventListener('click', onClose);
+  inviteCopyBtn.addEventListener('click', onCopy, { once: true });
+  inviteCloseBtn.addEventListener('click', onClose, { once: true });
 }
 
 function showPaymentModal(): Promise<boolean> {
@@ -242,6 +244,7 @@ function isFlipped(): boolean {
 function beginGame(state: api.GameState): void {
   stopLobbyMusic();
   hideProfileCard();
+  panelEl.classList.remove('hidden');
   muteBtn.classList.add('hidden');
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
@@ -270,6 +273,7 @@ function beginGame(state: api.GameState): void {
 async function loadGame(gameId: string): Promise<void> {
   stopLobbyMusic();
   hideProfileCard();
+  panelEl.classList.remove('hidden');
   muteBtn.classList.add('hidden');
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
@@ -305,6 +309,8 @@ async function handleWsEvent(event: { type: string; gameId: string }): Promise<v
   if (event.gameId !== currentGameId) return;
   if (event.type === 'move' || event.type === 'opponent_joined' || event.type === 'resigned') {
     const state = await api.getGame(currentGameId!);
+    // Keep playerColor in sync (e.g. after opponent joins)
+    if (state.playerColor) currentPlayerColor = state.playerColor;
     const active = ['active', 'check'].includes(state.status);
     gameIsActive = active;
     const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
@@ -325,9 +331,10 @@ async function handleWsEvent(event: { type: string; gameId: string }): Promise<v
 }
 
 async function handleMove(from: string, to: string): Promise<void> {
-  if (!currentGameId) return;
+  if (!currentGameId || !board || submittingMove) return;
+  submittingMove = true;
   try {
-    const optimistic = board!.applyMoveOptimistically(from, to);
+    const optimistic = board.applyMoveOptimistically(from, to);
     if (optimistic?.captured) playCapture(); else playMove();
     statusEl.textContent = 'Thinking…';
 
@@ -335,7 +342,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     const active = ['active', 'check'].includes(result.status);
 
     if (result.computerMove) {
-      board!.setFen(result.move.fenAfter, false, isFlipped(), { from: result.move.from, to: result.move.to });
+      board.setFen(result.move.fenAfter, false, isFlipped(), { from: result.move.from, to: result.move.to });
       await new Promise(r => setTimeout(r, 1000));
       // Computer move sound
       if (result.computerMove.san.includes('x')) playCapture();
@@ -345,7 +352,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     const finalLastMove = result.computerMove
       ? { from: result.computerMove.from, to: result.computerMove.to }
       : { from: result.move.from, to: result.move.to };
-    board!.setFen(result.fen, active, isFlipped(), finalLastMove);
+    board.setFen(result.fen, active, isFlipped(), finalLastMove);
     updateCapturedPieces(result.fen);
 
     const state = await api.getGame(currentGameId);
@@ -363,10 +370,18 @@ async function handleMove(from: string, to: string): Promise<void> {
     }
     refreshGameList();
   } catch (err: any) {
-    const state = await api.getGame(currentGameId!);
-    board!.setFen(state.fen, true, isFlipped(), lastMoveOf(state.moves));
-    updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+    try {
+      const state = await api.getGame(currentGameId!);
+      if (board) {
+        board.setFen(state.fen, true, isFlipped(), lastMoveOf(state.moves));
+        updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+      }
+    } catch {
+      // If recovery fetch also fails, just show the original error
+    }
     statusEl.textContent = err.message;
+  } finally {
+    submittingMove = false;
   }
 }
 
@@ -486,11 +501,24 @@ function updateCapturedPieces(fen: string): void {
     .reduce((sum, p) => sum + Math.max(0, (START_COUNTS[p] ?? 0) - (onBoard[p] ?? 0)) * PIECE_VALUES[p], 0);
 
   const diff = scoreWhite - scoreBlack;
-  const whiteScore = diff > 0 ? `<span class="captured-score">+${diff}</span>` : '';
-  const blackScore = diff < 0 ? `<span class="captured-score">+${-diff}</span>` : '';
 
-  capturedByWhiteEl.innerHTML = capturedByWhite.map(s => `<span class="captured-piece">${s}</span>`).join('') + whiteScore;
-  capturedByBlackEl.innerHTML = capturedByBlack.map(s => `<span class="captured-piece">${s}</span>`).join('') + blackScore;
+  function renderCaptures(el: HTMLElement, pieces: string[], scoreDiff: number): void {
+    el.innerHTML = '';
+    for (const s of pieces) {
+      const span = document.createElement('span');
+      span.className = 'captured-piece';
+      span.textContent = s;
+      el.appendChild(span);
+    }
+    if (scoreDiff > 0) {
+      const score = document.createElement('span');
+      score.className = 'captured-score';
+      score.textContent = `+${scoreDiff}`;
+      el.appendChild(score);
+    }
+  }
+  renderCaptures(capturedByWhiteEl, capturedByWhite, diff > 0 ? diff : 0);
+  renderCaptures(capturedByBlackEl, capturedByBlack, diff < 0 ? -diff : 0);
 
   const hasAny = capturedByWhite.length > 0 || capturedByBlack.length > 0;
   capturedPiecesEl.classList.toggle('hidden', !hasAny);
@@ -510,6 +538,7 @@ function showOverlay(status: string): void {
 
 function returnToStart(): void {
   disconnectFromGame();
+  panelEl.classList.add('hidden');
   showProfileCard(userNameEl.textContent ?? '');
   muteBtn.classList.remove('hidden');
   playLobbyMusic();
@@ -590,6 +619,7 @@ async function refreshGameList(): Promise<void> {
 
   function formatDate(iso: string): string {
     const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
     const now = new Date();
     const diffDays = Math.floor((now.getTime() - d.getTime()) / 86400000);
     if (diffDays === 0) return 'Today';
@@ -620,18 +650,36 @@ async function refreshGameList(): Promise<void> {
   function makeCard(g: GameSummary): HTMLElement {
     const div = document.createElement('div');
     div.className = 'game-card' + (g.gameId === currentGameId ? ' active-game' : '');
-    div.innerHTML = `
-      <div class="mode-icon-sm">${modeIcon(g)}</div>
-      <div class="card-body">
-        <div class="card-top">
-          <span class="card-opponent">${opponentLabel(g)}</span>
-          <span class="card-date">${formatDate(g.createdAt)}</span>
-        </div>
-        <div class="card-bottom">
-          ${makeBadge(g)}
-          ${!isFinished(g.status) && !g.waitingForOpponent ? `<span class="card-moves">${g.moveCount} moves</span>` : ''}
-        </div>
-      </div>`;
+
+    const modeIconEl = document.createElement('div');
+    modeIconEl.className = 'mode-icon-sm';
+    modeIconEl.innerHTML = modeIcon(g); // SVG is hardcoded, safe
+
+    const cardBody = document.createElement('div');
+    cardBody.className = 'card-body';
+
+    const cardTop = document.createElement('div');
+    cardTop.className = 'card-top';
+    const opponentEl = document.createElement('span');
+    opponentEl.className = 'card-opponent';
+    opponentEl.textContent = opponentLabel(g);
+    const dateEl = document.createElement('span');
+    dateEl.className = 'card-date';
+    dateEl.textContent = formatDate(g.createdAt);
+    cardTop.append(opponentEl, dateEl);
+
+    const cardBottom = document.createElement('div');
+    cardBottom.className = 'card-bottom';
+    cardBottom.innerHTML = makeBadge(g); // uses only hardcoded strings + server enum values
+    if (!isFinished(g.status) && !g.waitingForOpponent) {
+      const movesEl = document.createElement('span');
+      movesEl.className = 'card-moves';
+      movesEl.textContent = `${g.moveCount} moves`;
+      cardBottom.appendChild(movesEl);
+    }
+
+    cardBody.append(cardTop, cardBottom);
+    div.append(modeIconEl, cardBody);
     div.addEventListener('click', () => { loadGame(g.gameId); closeSidebar(); });
     return div;
   }
@@ -740,6 +788,7 @@ async function boot(): Promise<void> {
     if (joinCode) sessionStorage.setItem('pendingJoin', joinCode);
   } catch (e) {
     console.error('Auth init error:', e);
+    statusEl.textContent = 'Failed to initialize. Please refresh the page.';
   }
   loginScreenEl.classList.remove('hidden');
 }
@@ -980,7 +1029,7 @@ function selectColor(color: string): void {
 }
 
 function updatePreview(): void {
-  previewAvatarEl.textContent = PIECE_SYMBOLS[modalPiece] ?? '♕';
+  previewAvatarEl.textContent = AVATAR_PIECES[modalPiece] ?? '♕';
   previewAvatarEl.style.background = COLOR_GRADIENTS[modalColor] ?? COLOR_GRADIENTS['brown'];
   previewNameEl.textContent = profileNameInput.value.trim() || '—';
 }

@@ -41,11 +41,20 @@ class StockfishEngine {
 
   private waitFor(pred: (line: string) => boolean, timeoutMs = 10000): Promise<string> {
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`Stockfish timeout waiting for response`)), timeoutMs);
+      let settled = false;
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.send('stop');
+        reject(new Error(`Stockfish timeout waiting for response`));
+      }, timeoutMs);
       this.listeners.push((line) => {
         if (pred(line)) {
-          clearTimeout(timer);
-          resolve(line);
+          if (!settled) {
+            settled = true;
+            clearTimeout(timer);
+            resolve(line);
+          }
           return true;
         }
         return false;

@@ -12,6 +12,7 @@ export interface IGame extends Document {
   status: GameStatus;
   mode: GameMode;
   computerLevel: number | null;
+  moveCounter: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,9 +20,10 @@ export interface IGame extends Document {
 const GameSchema = new Schema<IGame>(
   {
     userId:       { type: String, required: true, index: true },
-    whiteUserId:  { type: String, default: null },
-    blackUserId:  { type: String, default: null },
+    whiteUserId:  { type: String, default: null, index: true, sparse: true },
+    blackUserId:  { type: String, default: null, index: true, sparse: true },
     inviteCode:   { type: String, default: null, sparse: true },
+    moveCounter:  { type: Number, default: 0 },
     fen:          { type: String, required: true },
     status: {
       type: String,

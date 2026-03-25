@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
 import gameRouter from './routes/game';
 import checkoutRouter from './routes/checkout';
@@ -12,6 +14,28 @@ export const app = express();
 
 const corsOrigin = process.env.FRONTEND_URL ?? '*';
 app.use(cors({ origin: corsOrigin }));
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'", `https://${process.env.AUTH0_DOMAIN}`],
+    },
+  },
+}));
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later' },
+});
+app.use(apiLimiter);
 
 // Webhook must use raw body BEFORE express.json() for Stripe signature verification
 app.use('/webhooks/stripe', express.raw({ type: 'application/json' }), webhookRouter);

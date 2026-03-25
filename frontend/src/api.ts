@@ -63,15 +63,22 @@ export async function createGame(mode: GameMode, computerLevel?: number): Promis
   return res.json();
 }
 
+function handleUnauthorized(res: Response): void {
+  if (res.status === 401) {
+    // Token expired or revoked — reload to re-authenticate
+    window.location.reload();
+  }
+}
+
 export async function listGames(): Promise<GameSummary[]> {
   const res = await fetch(BASE, { headers: await authHeaders() });
-  if (!res.ok) throw new Error('Failed to list games');
+  if (!res.ok) { handleUnauthorized(res); throw new Error('Failed to list games'); }
   return res.json();
 }
 
 export async function getGame(gameId: string): Promise<GameState> {
   const res = await fetch(`${BASE}/${gameId}`, { headers: await authHeaders() });
-  if (!res.ok) throw new Error('Failed to get game');
+  if (!res.ok) { handleUnauthorized(res); throw new Error('Failed to get game'); }
   return res.json();
 }
 
@@ -82,7 +89,7 @@ export async function postMove(gameId: string, from: string, to: string): Promis
     body: JSON.stringify({ from, to }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? 'Invalid move');
+  if (!res.ok) { handleUnauthorized(res); throw new Error(data.error ?? 'Invalid move'); }
   return data;
 }
 

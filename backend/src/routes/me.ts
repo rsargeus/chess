@@ -33,6 +33,9 @@ meRouter.get('/profile', async (req: Request, res: Response) => {
 meRouter.put('/profile', async (req: Request, res: Response) => {
   const userId = req.auth!.payload.sub as string;
   const { displayName, piece, color } = req.body;
+  if (displayName && typeof displayName === 'string' && displayName.length > 30) {
+    res.status(400).json({ error: 'Display name must be 30 characters or fewer' }); return;
+  }
   const allowed = { piece: ['king','queen','rook','bishop','knight','pawn'], color: ['brown','green','navy','purple','forest','wine','teal','slate'] };
   if (piece && !allowed.piece.includes(piece)) { res.status(400).json({ error: 'Invalid piece' }); return; }
   if (color && !allowed.color.includes(color)) { res.status(400).json({ error: 'Invalid color' }); return; }

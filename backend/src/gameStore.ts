@@ -187,8 +187,13 @@ export async function applyMove(gameId: string, from: string, to: string, userId
   }
   if (!result) return { error: 'Invalid move', status: 400 };
 
-  let moveCount = await Move.countDocuments({ gameId: game._id });
-  const playerMoveNumber = ++moveCount;
+  // Atomically increment moveCounter to get a unique, sequential move number
+  const updatedGame = await Game.findByIdAndUpdate(
+    game._id,
+    { $inc: { moveCounter: 1 } },
+    { new: true }
+  );
+  const playerMoveNumber = updatedGame!.moveCounter;
   const playerFenAfter = chess.fen();
   await saveMove(game._id, playerMoveNumber, from, to, result.san, playerFenAfter);
 
@@ -196,12 +201,14 @@ export async function applyMove(gameId: string, from: string, to: string, userId
   let computerMove: { san: string; from: string; to: string } | null = null;
 
   if (game.mode === 'vs_computer' && (status === 'active' || status === 'check')) {
+    const inc2 = await Game.findByIdAndUpdate(game._id, { $inc: { moveCounter: 1 } }, { new: true });
+    const compMoveNumber = inc2!.moveCounter;
     try {
       const level = game.computerLevel ?? 5;
       const uci = await getBestMove(chess.fen(), level);
       const { from: cf, to: ct, promotion: cp } = parseUciMove(uci);
       const compResult = chess.move({ from: cf, to: ct, promotion: cp ?? 'q' });
-      await saveMove(game._id, ++moveCount, cf, ct, compResult.san, chess.fen());
+      await saveMove(game._id, compMoveNumber, cf, ct, compResult.san, chess.fen());
       status = deriveStatus(chess);
       computerMove = { san: compResult.san, from: cf, to: ct };
     } catch (err) {
@@ -209,7 +216,7 @@ export async function applyMove(gameId: string, from: string, to: string, userId
       const fallback = randomMove(chess);
       if (fallback) {
         const compResult = chess.move(fallback);
-        await saveMove(game._id, ++moveCount, fallback.from, fallback.to, compResult.san, chess.fen());
+        await saveMove(game._id, compMoveNumber, fallback.from, fallback.to, compResult.san, chess.fen());
         status = deriveStatus(chess);
         computerMove = { san: compResult.san, from: fallback.from, to: fallback.to };
       }

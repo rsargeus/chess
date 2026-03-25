@@ -26,6 +26,8 @@ router.post('/', async (req: Request, res: Response) => {
         console.log(`Premium role assigned to ${userId}`);
       } catch (err) {
         console.error('Failed to assign premium role:', err);
+        // Return 500 so Stripe retries the webhook delivery
+        return res.status(500).json({ error: 'Failed to assign premium role' });
       }
     }
   }

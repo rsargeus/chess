@@ -57,6 +57,8 @@ export function initWebSocketServer(server: Server): void {
         addToRoom(gameId, ws);
         (ws as any).isAlive = true;
         ws.on('pong', () => { (ws as any).isAlive = true; });
+        // Close connection after 1 hour to force token re-validation
+        setTimeout(() => ws.close(1001, 'Session expired'), 60 * 60 * 1000);
       } catch {
         ws.close(1008, 'Auth failed');
       }

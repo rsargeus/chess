@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Chess Arena 360</title>
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg">
   <link rel="manifest" href="/manifest.json">
@@ -12,6 +12,8 @@
   <meta name="apple-mobile-web-app-title" content="Chess Arena">
   <link rel="apple-touch-icon" href="/icon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" as="style">
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -280,9 +282,9 @@
       flex: 1;
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       align-items: flex-start;
       align-content: flex-start;
-      justify-content: center;
       gap: 32px;
       padding: 24px;
       overflow: auto;
@@ -912,6 +914,13 @@
     .mute-btn.muted { color: #5c3610; }
 
     /* Profile card */
+    .board-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
     #profile-card {
       width: min(70vh, 560px);
       margin-top: 12px;
@@ -1207,9 +1216,13 @@
       #user-name { display: none; }
       #sidebar-toggle-btn { display: flex; }
 
+      html { height: auto; }
+      body { height: auto; min-height: 100dvh; }
       .layout {
         flex-direction: column;
-        overflow: auto;
+        overflow: visible;
+        height: auto;
+        flex: none;
       }
 
       /* Sidebar becomes a slide-in overlay */
@@ -1225,26 +1238,27 @@
       }
       .sidebar.open { left: 0; }
 
-      /* Main stacks vertically */
+      /* Main stacks vertically on mobile */
       .main {
         flex-direction: column;
         flex-wrap: nowrap;
+        flex: none;
+        width: 100%;
         align-items: center;
-        justify-content: flex-start;
-        padding: 12px;
+        padding: 12px 12px calc(12px + env(safe-area-inset-bottom, 16px));
         gap: 16px;
-        overflow: auto;
+        overflow: visible;
       }
 
-      /* Board fills screen width but never taller than 440px on mobile */
+      /* Board fills screen width on mobile, capped by both vw and available dvh */
       .board-wrap { flex-shrink: 0; }
       .board {
-        width: min(90vw, 440px);
-        height: min(90vw, 440px);
+        width: min(90vw, 440px, calc(100dvh - 300px));
+        height: min(90vw, 440px, calc(100dvh - 300px));
       }
       .board-wrap.empty::before {
-        width: min(90vw, 440px);
-        height: min(90vw, 440px);
+        width: min(90vw, 440px, calc(100dvh - 300px));
+        height: min(90vw, 440px, calc(100dvh - 300px));
       }
 
       /* Panel goes full width below board */
@@ -1257,23 +1271,23 @@
         width: min(90vw, 440px);
         flex-direction: column;
         align-items: center;
-        padding: 24px 16px 20px;
+        padding: 14px 16px 12px;
         gap: 0;
         text-align: center;
       }
       #profile-card .profile-avatar {
-        width: 96px;
-        height: 96px;
-        font-size: 3rem;
-        margin-bottom: 16px;
+        width: 64px;
+        height: 64px;
+        font-size: 2rem;
+        margin-bottom: 10px;
       }
       #profile-card .profile-identity {
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
       }
       #profile-card .profile-display-name {
-        font-size: 1.3rem;
-        margin-bottom: 8px;
+        font-size: 1.1rem;
+        margin-bottom: 6px;
       }
       #profile-card .profile-rank-badge {
         align-self: center;
@@ -1289,7 +1303,7 @@
         width: 100%;
         border: none;
         border-radius: 0;
-        padding: 18px 0;
+        padding: 10px 0;
       }
       #profile-card .profile-stat {
         flex: 1;
@@ -1298,7 +1312,7 @@
       }
       #profile-card .profile-stat:first-child { border-left: none; }
       #profile-card .profile-stat-value {
-        font-size: 1.6rem;
+        font-size: 1.3rem;
       }
       #profile-card .profile-stat-label {
         font-size: 0.55rem;
@@ -1645,13 +1659,13 @@
     <button id="new-game-btn" class="btn btn-primary">New Game</button>
     <div class="header-spacer"></div>
     <div class="user-info">
-      <button id="mute-btn" class="mute-btn hidden" title="Toggle music">
-        <svg id="mute-icon-on" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <button id="mute-btn" class="mute-btn hidden" title="Toggle music" aria-label="Toggle music">
+        <svg id="mute-icon-on" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
           <path d="M2 5.5H4.5L8.5 2.5V13.5L4.5 10.5H2V5.5Z" fill="currentColor"/>
           <path d="M10.5 5C11.5 5.8 12.2 6.9 12.2 8S11.5 10.2 10.5 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
           <path d="M12 3.5C13.6 4.8 14.5 6.3 14.5 8S13.6 11.2 12 12.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
         </svg>
-        <svg id="mute-icon-off" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden">
+        <svg id="mute-icon-off" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden" aria-hidden="true">
           <path d="M2 5.5H4.5L8.5 2.5V13.5L4.5 10.5H2V5.5Z" fill="currentColor"/>
           <line x1="10.5" y1="5.5" x2="14.5" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
           <line x1="14.5" y1="5.5" x2="10.5" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -1661,7 +1675,7 @@
       <span id="user-name"></span>
       <button id="logout-btn">Sign out</button>
     </div>
-    <button id="sidebar-toggle-btn">&#9776;</button>
+    <button id="sidebar-toggle-btn" aria-label="Toggle menu">&#9776;</button>
   </header>
 
   <div id="wakeup-banner" class="hidden">
@@ -1689,6 +1703,7 @@
     </aside>
 
     <main class="main">
+      <div class="board-column">
       <div class="board-wrap empty">
         <div id="board" class="board"></div>
       </div>
@@ -1724,15 +1739,16 @@
         <div class="profile-card-divider"></div>
         <button class="profile-edit-btn profile-edit-mobile" title="Edit Profile">Edit Profile</button>
       </div>
-      <div class="panel">
+      </div><!-- /.board-column -->
+      <div class="panel hidden">
         <div id="status"></div>
         <div class="move-list-row">
           <div id="move-list" class="hidden"></div>
           <button id="resign-btn" class="btn btn-secondary hidden">Resign</button>
         </div>
         <div class="nav-row">
-          <button id="nav-back-btn" class="btn btn-secondary hidden">&#8592;</button>
-          <button id="nav-fwd-btn" class="btn btn-secondary hidden">&#8594;</button>
+          <button id="nav-back-btn" class="btn btn-secondary hidden" aria-label="Previous move">&#8592;</button>
+          <button id="nav-fwd-btn" class="btn btn-secondary hidden" aria-label="Next move">&#8594;</button>
         </div>
         <div id="captured-pieces" class="captured-pieces hidden">
           <div class="captured-label">Captured pieces</div>

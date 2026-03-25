@@ -9,7 +9,7 @@ const APP_SHELL = [
   '/icon-512.png',
   '/chess-hero.png',
   '/chess-welcome.png',
-  'https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap',
+  // Cross-origin font URLs cannot be cached by service workers due to CORS
 ];
 
 self.addEventListener('install', (event) => {
@@ -55,6 +55,12 @@ self.addEventListener('fetch', (event) => {
         const toCache = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
         return response;
+      }).catch(() => {
+        // Offline and not cached — return a minimal offline page for navigation requests
+        if (event.request.mode === 'navigate') {
+          return caches.match('/');
+        }
+        return new Response('', { status: 503 });
       });
     })
   );

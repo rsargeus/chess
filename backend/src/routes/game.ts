@@ -28,6 +28,9 @@ router.post('/', async (req: Request, res: Response) => {
 });
 
 router.post('/join/:inviteCode', async (req: Request, res: Response) => {
+  if (!/^[0-9a-f]{12}$/.test(req.params.inviteCode)) {
+    return res.status(400).json({ error: 'Invalid invite code' });
+  }
   const result = await store.joinGame(req.params.inviteCode, userId(req));
   if ('error' in result) return res.status(result.status as number).json({ error: result.error });
   broadcastToGame(result.gameId, { type: 'opponent_joined', gameId: result.gameId });
@@ -48,6 +51,9 @@ router.get('/:gameId', async (req: Request, res: Response) => {
 router.post('/:gameId/moves', async (req: Request, res: Response) => {
   const { from, to } = req.body;
   if (!from || !to) return res.status(400).json({ error: 'from and to are required' });
+  if (!/^[a-h][1-8]$/.test(from) || !/^[a-h][1-8]$/.test(to)) {
+    return res.status(400).json({ error: 'Invalid move coordinates' });
+  }
   const result = await store.applyMove(req.params.gameId, from, to, userId(req));
   if ('error' in result) return res.status(result.status as number).json({ error: result.error });
   broadcastToGame(req.params.gameId, { type: 'move', gameId: req.params.gameId });

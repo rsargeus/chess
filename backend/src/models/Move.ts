@@ -20,4 +20,6 @@ const MoveSchema = new Schema<IMove>({
   playedAt: { type: Date, default: Date.now },
 });
 
+MoveSchema.index({ gameId: 1, moveNumber: 1 }, { unique: true });
+
 export const Move = mongoose.model<IMove>('Move', MoveSchema);
