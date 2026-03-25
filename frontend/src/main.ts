@@ -22,6 +22,7 @@ let board: Board | null = null;
 let showActiveOnly = true;
 let gameIsActive = false;
 let moveHistory: string[] = [];
+let moveRecords: api.MoveRecord[] = [];
 let viewIndex = 0;
 let currentPlayerColor: 'w' | 'b' | null = null; // null = not multiplayer
 
@@ -235,7 +236,7 @@ function beginGame(state: api.GameState): void {
   lobbyBtn.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
   const interactive = isMyTurn(state.turn, state.mode, state.waitingForOpponent);
-  board.setFen(state.fen, interactive, isFlipped());
+  board.setFen(state.fen, interactive, isFlipped(), null);
   setMoveHistory([]);
   navBackBtn.classList.remove('hidden');
   navFwdBtn.classList.remove('hidden');
@@ -267,7 +268,7 @@ async function loadGame(gameId: string): Promise<void> {
   moveListEl.classList.remove('hidden');
   board = new Board(boardEl, handleMove);
   const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
-  board.setFen(state.fen, interactive, isFlipped());
+  board.setFen(state.fen, interactive, isFlipped(), lastMoveOf(state.moves));
   setMoveHistory(state.moves);
   navBackBtn.classList.remove('hidden');
   navFwdBtn.classList.remove('hidden');
@@ -286,7 +287,7 @@ async function handleWsEvent(event: { type: string; gameId: string }): Promise<v
     const active = ['active', 'check'].includes(state.status);
     gameIsActive = active;
     const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
-    board!.setFen(state.fen, interactive, isFlipped());
+    board!.setFen(state.fen, interactive, isFlipped(), lastMoveOf(state.moves));
     updateCapturedPieces(state.fen);
     setMoveHistory(state.moves);
     updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
@@ -305,25 +306,25 @@ async function handleWsEvent(event: { type: string; gameId: string }): Promise<v
 async function handleMove(from: string, to: string): Promise<void> {
   if (!currentGameId) return;
   try {
-    board!.setFen(board!.getCurrentFen(), false, isFlipped());
+    const optimistic = board!.applyMoveOptimistically(from, to);
+    if (optimistic?.captured) playCapture(); else playMove();
     statusEl.textContent = 'Thinking…';
 
     const result = await api.postMove(currentGameId, from, to);
     const active = ['active', 'check'].includes(result.status);
 
-    // Player move sound
-    if (result.move.san.includes('x')) playCapture();
-    else playMove();
-
     if (result.computerMove) {
-      board!.setFen(result.move.fenAfter, false, isFlipped());
+      board!.setFen(result.move.fenAfter, false, isFlipped(), { from: result.move.from, to: result.move.to });
       await new Promise(r => setTimeout(r, 1000));
       // Computer move sound
       if (result.computerMove.san.includes('x')) playCapture();
       else playMove();
     }
 
-    board!.setFen(result.fen, active, isFlipped());
+    const finalLastMove = result.computerMove
+      ? { from: result.computerMove.from, to: result.computerMove.to }
+      : { from: result.move.from, to: result.move.to };
+    board!.setFen(result.fen, active, isFlipped(), finalLastMove);
     updateCapturedPieces(result.fen);
 
     const state = await api.getGame(currentGameId);
@@ -342,7 +343,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     refreshGameList();
   } catch (err: any) {
     const state = await api.getGame(currentGameId!);
-    board!.setFen(state.fen, true, isFlipped());
+    board!.setFen(state.fen, true, isFlipped(), lastMoveOf(state.moves));
     updateStatus(state.status, state.turn, state.mode, state.computerLevel);
     statusEl.textContent = err.message;
   }
@@ -380,8 +381,13 @@ function updateStatus(status: string, turn: string, mode: api.GameMode, level: n
   statusEl.textContent = statusMap[status] ?? status;
 }
 
+function lastMoveOf(moves: api.MoveRecord[]): { from: string; to: string } | null {
+  return moves.length > 0 ? { from: moves[moves.length - 1].from, to: moves[moves.length - 1].to } : null;
+}
+
 function setMoveHistory(moves: api.MoveRecord[]): void {
   moveHistory = [INITIAL_FEN, ...moves.map(m => m.fenAfter)];
+  moveRecords = moves;
   viewIndex = moveHistory.length - 1;
   updateNavButtons();
 }
@@ -395,7 +401,8 @@ function navigateTo(index: number): void {
   if (index < 0 || index >= moveHistory.length) return;
   viewIndex = index;
   const isLatest = viewIndex === moveHistory.length - 1;
-  board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive, isFlipped());
+  const navLastMove = viewIndex > 0 ? { from: moveRecords[viewIndex - 1].from, to: moveRecords[viewIndex - 1].to } : null;
+  board!.setFen(moveHistory[viewIndex], isLatest && gameIsActive, isFlipped(), navLastMove);
   updateNavButtons();
   highlightMoveInList(viewIndex - 1); // viewIndex 0 = before any moves
   updateCapturedPieces(moveHistory[viewIndex]);

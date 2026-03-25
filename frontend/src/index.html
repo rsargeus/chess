@@ -7,7 +7,7 @@
   <link rel="icon" type="image/svg+xml" href="/src/favicon.svg">
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#160c04">
-  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Chess Arena">
   <link rel="apple-touch-icon" href="/icon-192.png">
@@ -326,6 +326,8 @@
     }
     .square.light { background: #EEEED2; }
     .square.dark  { background: #769656; }
+    .square.light.last-move { background: #f0e880; }
+    .square.dark.last-move  { background: #b8a830; }
     .square.highlight::after {
       content: '';
       position: absolute;
@@ -348,6 +350,16 @@
     .piece svg {
       width: 85%;
       height: 85%;
+    }
+    .drag-ghost {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .drag-ghost svg {
+      width: 85%;
+      height: 85%;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.5));
     }
 
     /* Coordinate labels */
@@ -1512,7 +1524,7 @@
 
   <script src="/dist/bundle.js"></script>
   <script>
-    if ('serviceWorker' in navigator) {
+    if ('serviceWorker' in navigator && window.location.hostname !== 'localhost') {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/sw.js');
       });
