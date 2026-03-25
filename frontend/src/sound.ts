@@ -1,7 +1,20 @@
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
-  if (!ctx) ctx = new AudioContext();
+  if (!ctx) {
+    ctx = new AudioContext();
+    // iOS/Android require AudioContext to be resumed inside a user gesture.
+    // Listen for the first pointer interaction and unlock once.
+    const unlock = () => {
+      ctx?.resume();
+      document.removeEventListener('pointerdown', unlock, true);
+      document.removeEventListener('touchstart',  unlock, true);
+    };
+    document.addEventListener('pointerdown', unlock, true);
+    document.addEventListener('touchstart',  unlock, true);
+  }
+  // Resume if suspended (e.g. tab was backgrounded)
+  if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
 
