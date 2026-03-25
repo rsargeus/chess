@@ -1,7 +1,7 @@
 import { Board } from './board';
 import * as api from './api';
 import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
-import { playMove, playCapture, playCheck, playGameOver } from './sound';
+import { playMove, playCapture, playCheck, playGameOver, unlockAudio } from './sound';
 import { connectToGame, disconnectFromGame } from './ws-client';
 
 const LEVELS: Record<number, string> = {
@@ -815,5 +815,9 @@ async function pollForPremium(): Promise<void> {
     }
   }
 }
+
+// Unlock AudioContext on first interaction (required on iOS Safari)
+document.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
+document.addEventListener('touchstart',  unlockAudio, { once: true, capture: true });
 
 boot();

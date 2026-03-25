@@ -1,21 +1,21 @@
 let ctx: AudioContext | null = null;
 
 function getCtx(): AudioContext {
-  if (!ctx) {
-    ctx = new AudioContext();
-    // iOS/Android require AudioContext to be resumed inside a user gesture.
-    // Listen for the first pointer interaction and unlock once.
-    const unlock = () => {
-      ctx?.resume();
-      document.removeEventListener('pointerdown', unlock, true);
-      document.removeEventListener('touchstart',  unlock, true);
-    };
-    document.addEventListener('pointerdown', unlock, true);
-    document.addEventListener('touchstart',  unlock, true);
-  }
-  // Resume if suspended (e.g. tab was backgrounded)
-  if (ctx.state === 'suspended') ctx.resume();
+  if (!ctx) ctx = new AudioContext();
   return ctx;
+}
+
+// iOS Safari requires AudioContext to be resumed AND a buffer source started
+// within a direct user gesture. Call this on first pointerdown/touchstart.
+export function unlockAudio(): void {
+  const ac = getCtx();
+  ac.resume().then(() => {
+    const buf = ac.createBuffer(1, 1, ac.sampleRate);
+    const src = ac.createBufferSource();
+    src.buffer = buf;
+    src.connect(ac.destination);
+    src.start(0);
+  });
 }
 
 // Short wooden thud — like a chess piece placed on a board
