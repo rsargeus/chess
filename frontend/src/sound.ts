@@ -18,6 +18,74 @@ export function unlockAudio(): void {
   });
 }
 
+// ── Lobby music ───────────────────────────────────────────────────────────────
+
+let lobbyAudio: HTMLAudioElement | null = null;
+let muted: boolean = localStorage.getItem('muted') === 'true';
+let pendingPlay = false;
+
+function getLobbyAudio(): HTMLAudioElement {
+  if (!lobbyAudio) {
+    lobbyAudio = new Audio('/knightly-lobby-wait.mp3');
+    lobbyAudio.loop = true;
+    lobbyAudio.volume = 0.35;
+  }
+  return lobbyAudio;
+}
+
+function notifyMusicStarted(): void {
+  document.dispatchEvent(new Event('lobby-music-started'));
+}
+
+function onGestureRetry(e: Event): void {
+  if (!pendingPlay || muted) return;
+  if ((e.target as Element)?.closest('button')) return;
+  getLobbyAudio().play().then(() => {
+    pendingPlay = false;
+    document.removeEventListener('pointerdown', onGestureRetry as EventListener, true);
+    document.removeEventListener('touchstart', onGestureRetry as EventListener, true);
+    notifyMusicStarted();
+  }).catch(() => {});
+}
+
+export function playLobbyMusic(): void {
+  if (muted) return;
+  getLobbyAudio().play().then(() => {
+    notifyMusicStarted();
+  }).catch(() => {
+    // Autoplay blocked — retry on the next user gesture
+    pendingPlay = true;
+    document.addEventListener('pointerdown', onGestureRetry as EventListener, { capture: true });
+    document.addEventListener('touchstart', onGestureRetry as EventListener, { capture: true });
+  });
+}
+
+export function isLobbyPlaying(): boolean {
+  return !!lobbyAudio && !lobbyAudio.paused;
+}
+
+export function stopLobbyMusic(): void {
+  pendingPlay = false;
+  document.removeEventListener('pointerdown', onGestureRetry as EventListener, true);
+  document.removeEventListener('touchstart', onGestureRetry as EventListener, true);
+  getLobbyAudio().pause();
+}
+
+export function toggleMute(): boolean {
+  muted = !muted;
+  localStorage.setItem('muted', String(muted));
+  if (muted) {
+    stopLobbyMusic();
+  } else {
+    playLobbyMusic();
+  }
+  return muted;
+}
+
+export function isMuted(): boolean {
+  return muted;
+}
+
 // Short wooden thud — like a chess piece placed on a board
 function woodThud(time: number, vol = 0.6, pitch = 180): void {
   const ac = getCtx();

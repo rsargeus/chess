@@ -1,7 +1,7 @@
 import { Board } from './board';
 import * as api from './api';
 import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPassword, logout } from './auth';
-import { playMove, playCapture, playCheck, playGameOver, unlockAudio } from './sound';
+import { playMove, playCapture, playCheck, playGameOver, unlockAudio, playLobbyMusic, stopLobbyMusic, toggleMute, isMuted, isLobbyPlaying } from './sound';
 import { connectToGame, disconnectFromGame } from './ws-client';
 
 const LEVELS: Record<number, string> = {
@@ -49,6 +49,9 @@ const capturedByWhiteEl = document.getElementById('captured-by-white')!;
 const capturedByBlackEl = document.getElementById('captured-by-black')!;
 
 const wakeupBannerEl = document.getElementById('wakeup-banner')!;
+const muteBtn      = document.getElementById('mute-btn')!;
+const muteIconOn   = document.getElementById('mute-icon-on')!;
+const muteIconOff  = document.getElementById('mute-icon-off')!;
 
 const overlayEl      = document.getElementById('overlay')!;
 const overlayMsg     = document.getElementById('overlay-msg')!;
@@ -225,6 +228,8 @@ function isFlipped(): boolean {
 }
 
 function beginGame(state: api.GameState): void {
+  stopLobbyMusic();
+  muteBtn.classList.add('hidden');
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
   gameIsActive = true;
@@ -250,6 +255,8 @@ function beginGame(state: api.GameState): void {
 }
 
 async function loadGame(gameId: string): Promise<void> {
+  stopLobbyMusic();
+  muteBtn.classList.add('hidden');
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
@@ -489,6 +496,8 @@ function showOverlay(status: string): void {
 
 function returnToStart(): void {
   disconnectFromGame();
+  muteBtn.classList.remove('hidden');
+  playLobbyMusic();
   currentGameId = null;
   currentPlayerColor = null;
   board = null;
@@ -634,8 +643,14 @@ sidebarToggleBtn.addEventListener('click', () => {
   sidebarOverlayEl.classList.toggle('open', isOpen);
 });
 sidebarOverlayEl.addEventListener('click', closeSidebar);
-loginGoogleBtns.forEach(btn => btn.addEventListener('click', () => loginWithGoogle()));
-loginEmailBtns.forEach(btn => btn.addEventListener('click', () => loginWithEmailPassword()));
+loginGoogleBtns.forEach(btn => btn.addEventListener('click', async () => {
+  try { await loginWithGoogle(); } catch { return; }
+  await showApp();
+}));
+loginEmailBtns.forEach(btn => btn.addEventListener('click', async () => {
+  try { await loginWithEmailPassword(); } catch { return; }
+  await showApp();
+}));
 
 // Mobile onboarding: update dots on swipe
 const loginSlidesEl = document.getElementById('login-slides');
@@ -776,6 +791,8 @@ async function showApp(paymentSuccess = false): Promise<void> {
     userNameEl.textContent = user.name ?? user.email ?? '';
   }
 
+  muteBtn.classList.remove('hidden');
+  playLobbyMusic();
   await probeBackend();
 
   const me = await api.getMe().catch(() => ({ premium: false }));
@@ -819,5 +836,24 @@ async function pollForPremium(): Promise<void> {
 // Unlock AudioContext on first interaction (required on iOS Safari)
 document.addEventListener('pointerdown', unlockAudio, { once: true, capture: true });
 document.addEventListener('touchstart',  unlockAudio, { once: true, capture: true });
+
+function updateMuteBtn(): void {
+  const off = isMuted() || !isLobbyPlaying();
+  muteBtn.classList.toggle('muted', off);
+  muteIconOn.classList.toggle('hidden', off);
+  muteIconOff.classList.toggle('hidden', !off);
+}
+
+muteBtn.addEventListener('click', () => {
+  if (!isMuted() && !isLobbyPlaying()) {
+    // Blocked by browser — this click is a gesture, use it to start music
+    playLobbyMusic();
+  } else {
+    toggleMute();
+  }
+  updateMuteBtn();
+});
+document.addEventListener('lobby-music-started', updateMuteBtn);
+updateMuteBtn();
 
 boot();
