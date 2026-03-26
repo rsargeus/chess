@@ -36,7 +36,7 @@ const loginGoogleBtns = document.querySelectorAll<HTMLElement>('.js-login-google
 const loginEmailBtns  = document.querySelectorAll<HTMLElement>('.js-login-email');
 const userNameEl     = document.getElementById('user-name')!;
 const logoutBtn      = document.getElementById('logout-btn')!;
-const premiumBadgeEl = document.getElementById('premium-badge')!;
+const premiumBadgeEl = document.getElementById('profile-premium-badge')!;
 
 const boardEl        = document.getElementById('board')!;
 const statusEl       = document.getElementById('status')!;
