@@ -73,7 +73,7 @@ chess/
 │   └── tsconfig.json
 ├── frontend/
 │   ├── scripts/
-│   │   ├── build.js                  # esbuild production build (also copies public/ and sw.js)
+│   │   ├── build.js                  # esbuild production build — hashed bundle, patches sw.js, copies public/
 │   │   └── dev.js                    # esbuild watch + dev server + proxy
 │   ├── public/                       # Static files copied verbatim to dist/
 │   │   ├── manifest.json             # PWA Web App Manifest
@@ -438,10 +438,22 @@ cd frontend && npm test
 ### PWA
 The app is installable on iOS and Android. Requirements are fulfilled:
 - `public/manifest.json` — name, icons, theme color, display: standalone
-- `src/sw.js` — service worker (cache-first for static assets, network-first for API routes)
+- `src/sw.js` — service worker (see caching strategy below)
 - HTTPS — provided by Cloudflare Pages
 - iOS: users must use Safari → Share → Add to Home Screen (no automatic prompt)
 - Android (Chrome): browser shows install prompt automatically after qualifying visits
+
+#### Caching strategy
+
+| Resource | Strategy | Reason |
+|---|---|---|
+| `index.html` (navigation) | Network-first, fall back to cache | Always serve latest HTML when online |
+| `bundle-[hash].js` + static assets | Cache-first | Hash in filename guarantees freshness; safe to cache indefinitely |
+| `/me`, `/games`, `/checkout`, `/health` | Network-first, no cache fallback | Must always reflect live server state |
+
+**Bundle hashing:** `build.js` uses esbuild's `[hash]` in `entryNames`, producing a unique filename (e.g. `bundle-DQJ5ON4A.js`) on every build. The build script then automatically patches `dist/sw.js` with the correct filename and a fresh timestamp-based `CACHE_NAME` (e.g. `chess-arena-1744520871825`). Old caches from previous deploys are deleted in the service worker's `activate` event.
+
+**Backend warm-up:** `GET /health` is fired immediately when the landing page is shown (before login), so the Render free-tier backend has time to wake up before the user authenticates.
 
 ### Backend — Render (Web Service, Free tier)
 
