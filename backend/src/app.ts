@@ -35,6 +35,9 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
 });
+// Health check is exempt from rate limiting (used for backend wake-up probing)
+app.get('/health', (_req, res) => res.json({ ok: true }));
+
 app.use(apiLimiter);
 
 // Webhook must use raw body BEFORE express.json() for Stripe signature verification
@@ -54,7 +57,6 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
 };
 
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
-app.get('/health', (_req, res) => res.json({ ok: true }));
 app.use('/me', jwtCheck, meRouter);
 app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);
