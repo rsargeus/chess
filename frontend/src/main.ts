@@ -469,9 +469,10 @@ function renderMoveList(moves: api.MoveRecord[]): void {
   moveListEl.scrollTop = moveListEl.scrollHeight;
 }
 
+// \uFE0E forces text rendering on iOS (prevents emoji-style rendering of chess pieces)
 const PIECE_SYMBOLS: Record<string, string> = {
-  P: '♙', N: '♘', B: '♗', R: '♖', Q: '♕',
-  p: '♟', n: '♞', b: '♝', r: '♜', q: '♛',
+  P: '♙\uFE0E', N: '♘\uFE0E', B: '♗\uFE0E', R: '♖\uFE0E', Q: '♕\uFE0E',
+  p: '♟\uFE0E', n: '♞\uFE0E', b: '♝\uFE0E', r: '♜\uFE0E', q: '♛\uFE0E',
 };
 const PIECE_ORDER = ['Q', 'R', 'B', 'N', 'P'];
 const PIECE_VALUES: Record<string, number> = { Q: 9, R: 5, B: 3, N: 3, P: 1 };
