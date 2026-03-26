@@ -1209,7 +1209,7 @@
     /* ── Mobile styles ── */
     @media (max-width: 768px) {
       header {
-        padding: 8px 12px;
+        padding: calc(8px + env(safe-area-inset-top, 0px)) 12px 8px;
         gap: 8px;
       }
       header h1 { font-size: 1.1rem; }
