@@ -792,6 +792,7 @@ async function boot(): Promise<void> {
     statusEl.textContent = 'Failed to initialize. Please refresh the page.';
   }
   loginScreenEl.classList.remove('hidden');
+  api.pingBackend().catch(() => {}); // warm up backend while user is on landing page
 }
 
 // ── Backend wake-up probe ────────────────────────────────────────────────────
