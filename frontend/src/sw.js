@@ -31,6 +31,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // Network-first for HTML navigation — always try to get fresh index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/'))
+    );
+    return;
+  }
+
   // Network-first for API calls
   if (url.pathname.startsWith('/games') || url.pathname.startsWith('/me') ||
       url.pathname.startsWith('/checkout') || url.pathname.startsWith('/health')) {
@@ -42,7 +50,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for GET requests only
+  // Cache-first for GET requests only (hashed static assets)
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
@@ -56,10 +64,6 @@ self.addEventListener('fetch', (event) => {
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, toCache));
         return response;
       }).catch(() => {
-        // Offline and not cached — return a minimal offline page for navigation requests
-        if (event.request.mode === 'navigate') {
-          return caches.match('/');
-        }
         return new Response('', { status: 503 });
       });
     })
