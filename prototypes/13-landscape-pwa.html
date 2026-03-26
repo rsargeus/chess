@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Landscape PWA — Prototype</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:      #d4a84b;
+      --gold-dim:  #8a6040;
+      --bg:        #1a0e05;
+      --bg-dark:   #120a03;
+      --bg-mid:    #1e1008;
+      --border:    #3a1e08;
+      --border-lo: #2a1808;
+      --text:      #e2b96f;
+      --text-dim:  #9a7050;
+    }
+
+    html, body { height: 100%; overflow: hidden; background: var(--bg-dark); color: var(--text); font-family: system-ui, sans-serif; }
+
+    /* ── Proto nav ── */
+    .proto-nav {
+      position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 6px; z-index: 999;
+      background: rgba(0,0,0,0.75); padding: 5px 10px; border-radius: 8px;
+    }
+    .proto-nav button {
+      font-family: 'Cinzel', serif; font-size: 10px;
+      background: var(--border); color: var(--text-dim);
+      border: 1px solid var(--border); padding: 4px 10px; border-radius: 4px; cursor: pointer;
+    }
+    .proto-nav button.active { background: var(--gold); color: #1a0800; border-color: var(--gold); }
+
+    /* ── Views ── */
+    .view { display: none; height: 100%; flex-direction: column; }
+    .view.active { display: flex; }
+
+    /* ── Header ── */
+    header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 12px; height: 40px; flex-shrink: 0;
+      background: var(--bg-dark); border-bottom: 1px solid var(--border-lo);
+    }
+    header h1 {
+      font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700;
+      color: var(--gold); letter-spacing: 0.08em;
+    }
+    .header-spacer { flex: 1; }
+    .btn {
+      font-family: 'Cinzel', serif; font-size: 0.62rem; letter-spacing: 0.05em;
+      font-weight: 600; border-radius: 4px; cursor: pointer; padding: 5px 10px; border: none;
+    }
+    .btn-primary { background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%); color: #1a0800; }
+    .btn-secondary { background: none; border: 1px solid #5c3610; color: #8a6040; }
+    .user-info { display: flex; align-items: center; gap: 8px; font-size: 0.72rem; color: var(--text-dim); }
+    .mute-btn { background: none; border: none; color: var(--gold-dim); cursor: pointer; padding: 4px; display: flex; }
+    .logout-btn {
+      background: none; border: 1px solid #5c3610; color: #8a6040;
+      padding: 4px 8px; border-radius: 4px; font-family: 'Cinzel', serif;
+      font-size: 0.6rem; letter-spacing: 0.05em; cursor: pointer;
+    }
+
+    /* ── Three-column body ── */
+    .three-col {
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
+    }
+
+    /* ══ LEFT: Sidebar ══════════════════════════════════════════ */
+    .col-left {
+      width: 180px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-right: 1px solid var(--border-lo);
+      overflow: hidden;
+    }
+    .sidebar-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px; flex-shrink: 0; border-bottom: 1px solid var(--border-lo);
+    }
+    .sidebar-header span {
+      font-family: 'Cinzel', serif; font-size: 0.55rem;
+      letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-dim);
+    }
+    .active-only-btn {
+      font-family: 'Cinzel', serif; font-size: 0.48rem; letter-spacing: 0.06em;
+      background: none; border: 1px solid #5c3610; color: #8a6040;
+      padding: 2px 6px; border-radius: 3px; cursor: pointer;
+    }
+    .game-list { flex: 1; overflow-y: auto; padding: 4px 6px 8px; }
+    .game-list::-webkit-scrollbar { width: 3px; }
+    .game-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .group-label {
+      font-family: 'Cinzel', serif; font-size: 0.48rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: var(--text-dim); padding: 5px 4px 3px;
+    }
+    .game-card {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 6px; border-radius: 4px; cursor: pointer;
+      border: 1px solid transparent; margin-bottom: 2px;
+    }
+    .game-card:hover { background: rgba(200,146,42,0.06); border-color: var(--border-lo); }
+    .game-card.selected { background: rgba(200,146,42,0.1); border-color: rgba(200,146,42,0.3); }
+    .game-icon {
+      width: 26px; height: 26px; background: var(--bg-mid);
+      border: 1px solid var(--border); border-radius: 3px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; flex-shrink: 0;
+    }
+    .game-info { flex: 1; min-width: 0; }
+    .game-title {
+      font-family: 'Cinzel', serif; font-size: 0.6rem; font-weight: 600;
+      color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .game-sub { font-size: 0.55rem; color: var(--text-dim); margin-top: 1px; }
+    .dot {
+      width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-turn { background: var(--gold); }
+    .dot-wait { background: var(--text-dim); }
+
+    /* ══ MIDDLE: Board / Image ══════════════════════════════════ */
+    .col-mid {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 8px; overflow: hidden; min-width: 0;
+    }
+    .board-img {
+      height: calc(100dvh - 56px);
+      width: calc(100dvh - 56px);
+      max-height: calc(100% - 0px);
+      max-width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+      flex-shrink: 0;
+      aspect-ratio: 1;
+    }
+    .board-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .board-grid {
+      display: grid; grid-template-columns: repeat(8,1fr); grid-template-rows: repeat(8,1fr);
+      width: 100%; height: 100%;
+    }
+    .sq.light { background: #c8a870; }
+    .sq.dark  { background: #6b3a1f; }
+    .sq.piece { display: flex; align-items: center; justify-content: center; font-size: clamp(10px,2.5vmin,22px); }
+
+    /* ══ RIGHT: Profile card ════════════════════════════════════ */
+    .col-right {
+      width: 180px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      border-left: 1px solid var(--border-lo);
+      overflow: hidden;
+    }
+
+    /* Profile card */
+    .profile-card {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; padding: 14px 10px 10px;
+      gap: 0; text-align: center; overflow-y: auto;
+    }
+    .profile-avatar {
+      width: 52px; height: 52px;
+      background: var(--bg-mid); border: 1px solid var(--border);
+      border-radius: 6px; display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; margin-bottom: 8px; flex-shrink: 0;
+    }
+    .profile-name {
+      font-family: 'Cinzel', serif; font-size: 0.82rem; font-weight: 600;
+      color: var(--text); margin-bottom: 5px;
+    }
+    .profile-badges { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; margin-bottom: 10px; }
+    .rank-badge {
+      font-family: 'Cinzel', serif; font-size: 0.46rem; letter-spacing: 0.12em;
+      text-transform: uppercase; color: #c8922a;
+      background: rgba(200,146,42,0.1); border: 1px solid rgba(200,146,42,0.25);
+      border-radius: 3px; padding: 2px 6px;
+    }
+    .premium-badge {
+      font-family: 'Cinzel', serif; font-size: 0.46rem; letter-spacing: 0.1em;
+      text-transform: uppercase; font-weight: 700;
+      background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%);
+      color: #1a0800; border-radius: 3px; padding: 2px 6px;
+    }
+    .divider { width: 100%; height: 1px; background: var(--border-lo); margin: 0 0 0; flex-shrink: 0; }
+    .profile-stats {
+      display: flex; width: 100%; padding: 8px 0;
+    }
+    .profile-stat {
+      flex: 1; text-align: center;
+      border-left: 1px solid var(--border-lo);
+    }
+    .profile-stat:first-child { border-left: none; }
+    .stat-val {
+      font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; color: var(--gold);
+    }
+    .stat-lbl {
+      font-family: 'Cinzel', serif; font-size: 0.44rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim); margin-top: 2px;
+    }
+    .divider2 { width: 100%; height: 1px; background: var(--border-lo); flex-shrink: 0; }
+    .edit-btn {
+      margin-top: 10px; font-family: 'Cinzel', serif; font-size: 0.6rem;
+      letter-spacing: 0.06em; background: none; border: 1px solid #5c3610;
+      color: #8a6040; padding: 6px 20px; border-radius: 4px; cursor: pointer;
+    }
+
+    /* In-game right panel */
+    .ingame-right {
+      flex: 1; display: flex; flex-direction: column;
+      padding: 8px; gap: 6px; overflow: hidden;
+    }
+    .status-bar {
+      font-family: 'Cinzel', serif; font-size: 0.68rem; letter-spacing: 0.06em;
+      color: var(--gold); text-align: center; flex-shrink: 0;
+    }
+    .cap-wrap {
+      background: var(--bg-mid); border: 1px solid var(--border-lo);
+      border-radius: 4px; padding: 5px 7px; flex-shrink: 0;
+    }
+    .cap-label {
+      font-family: 'Cinzel', serif; font-size: 0.44rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 2px;
+    }
+    .cap-pieces { font-size: 0.85rem; min-height: 1.2em; }
+    .move-list-wrap {
+      flex: 1; overflow-y: auto;
+      background: var(--bg-mid); border: 1px solid var(--border-lo);
+      border-radius: 4px; padding: 5px 7px;
+    }
+    .move-list-wrap::-webkit-scrollbar { width: 3px; }
+    .move-list-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+    .move-row { display: flex; gap: 4px; margin-bottom: 2px; font-size: 0.62rem; }
+    .move-num { color: var(--text-dim); width: 16px; flex-shrink: 0; }
+    .move-san { color: var(--text); font-family: monospace; }
+    .game-actions { display: flex; gap: 4px; flex-shrink: 0; }
+    .game-actions .btn { flex: 1; font-size: 0.52rem; padding: 6px 4px; }
+  </style>
+</head>
+<body>
+
+<div class="proto-nav">
+  <button class="active" onclick="show('lobby')">Lobby</button>
+  <button onclick="show('ingame')">In Game</button>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ LOBBY -->
+<div class="view active" id="view-lobby">
+  <header>
+    <h1>Chess</h1>
+    <button class="btn btn-primary">New Game</button>
+    <div class="header-spacer"></div>
+    <div class="user-info">
+      <span>robert@sargeus.se</span>
+      <button class="mute-btn">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M2 5.5H4.5L8.5 2.5V13.5L4.5 10.5H2V5.5Z" fill="currentColor"/>
+          <path d="M10.5 5C11.5 5.8 12.2 6.9 12.2 8S11.5 10.2 10.5 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
+      <button class="logout-btn">Sign out</button>
+    </div>
+  </header>
+
+  <div class="three-col">
+
+    <!-- LEFT: Game list -->
+    <div class="col-left">
+      <div class="sidebar-header">
+        <span>Games</span>
+        <button class="active-only-btn">Active only</button>
+      </div>
+      <div class="game-list">
+        <div class="group-label">Your Turn</div>
+        <div class="game-card">
+          <div class="dot dot-turn"></div>
+          <div class="game-icon">🌍</div>
+          <div class="game-info">
+            <div class="game-title">vs Opponent</div>
+            <div class="game-sub">0 moves · Today</div>
+          </div>
+        </div>
+        <div class="game-card">
+          <div class="dot dot-turn"></div>
+          <div class="game-icon" style="font-size:0.65rem;font-family:'Cinzel',serif;color:#d4a84b;">AI</div>
+          <div class="game-info">
+            <div class="game-title">AI Level 5</div>
+            <div class="game-sub">2 moves · Today</div>
+          </div>
+        </div>
+        <div class="game-card">
+          <div class="dot dot-turn"></div>
+          <div class="game-icon" style="font-size:0.65rem;font-family:'Cinzel',serif;color:#d4a84b;">AI</div>
+          <div class="game-info">
+            <div class="game-title">AI Level 5</div>
+            <div class="game-sub">22 moves · 20 Mar</div>
+          </div>
+        </div>
+        <div class="group-label" style="margin-top:4px;">Waiting</div>
+        <div class="game-card">
+          <div class="dot dot-wait"></div>
+          <div class="game-icon">🌍</div>
+          <div class="game-info">
+            <div class="game-title">Invite sent…</div>
+            <div class="game-sub">0 moves · Today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: Hero image -->
+    <div class="col-mid">
+      <div class="board-img">
+        <img src="image-landing.png" alt="Chess"
+          onerror="this.parentElement.style.background='#2a1808'" />
+      </div>
+    </div>
+
+    <!-- RIGHT: Profile card -->
+    <div class="col-right">
+      <div class="profile-card">
+        <div class="profile-avatar">♛</div>
+        <div class="profile-name">Robert</div>
+        <div class="profile-badges">
+          <span class="rank-badge">Casual</span>
+          <span class="premium-badge">♛ Premium</span>
+        </div>
+        <div class="divider"></div>
+        <div class="profile-stats">
+          <div class="profile-stat">
+            <div class="stat-val">24</div>
+            <div class="stat-lbl">Games</div>
+          </div>
+          <div class="profile-stat">
+            <div class="stat-val">3h</div>
+            <div class="stat-lbl">Time</div>
+          </div>
+          <div class="profile-stat">
+            <div class="stat-val">142</div>
+            <div class="stat-lbl">Points</div>
+          </div>
+        </div>
+        <div class="divider2"></div>
+        <button class="edit-btn">Edit Profile</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ IN-GAME -->
+<div class="view" id="view-ingame">
+  <header>
+    <h1>Chess</h1>
+    <button class="btn btn-secondary">Lobby</button>
+    <div class="header-spacer"></div>
+    <div class="user-info">
+      <span>robert@sargeus.se</span>
+      <button class="mute-btn">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M2 5.5H4.5L8.5 2.5V13.5L4.5 10.5H2V5.5Z" fill="currentColor"/>
+          <path d="M10.5 5C11.5 5.8 12.2 6.9 12.2 8S11.5 10.2 10.5 11" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+        </svg>
+      </button>
+      <button class="logout-btn">Sign out</button>
+    </div>
+  </header>
+
+  <div class="three-col">
+
+    <!-- LEFT: Game list (compact, current game highlighted) -->
+    <div class="col-left">
+      <div class="sidebar-header">
+        <span>Games</span>
+        <button class="active-only-btn">Active</button>
+      </div>
+      <div class="game-list">
+        <div class="group-label">Your Turn</div>
+        <div class="game-card selected">
+          <div class="dot dot-turn"></div>
+          <div class="game-icon" style="font-size:0.65rem;font-family:'Cinzel',serif;color:#d4a84b;">AI</div>
+          <div class="game-info">
+            <div class="game-title">AI Level 5</div>
+            <div class="game-sub">8 moves · Today</div>
+          </div>
+        </div>
+        <div class="game-card">
+          <div class="dot dot-turn"></div>
+          <div class="game-icon">🌍</div>
+          <div class="game-info">
+            <div class="game-title">vs Opponent</div>
+            <div class="game-sub">0 moves · Today</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MIDDLE: Chess board -->
+    <div class="col-mid">
+      <div class="board-img" style="border-radius:4px;">
+        <div class="board-grid" id="board"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Game panel -->
+    <div class="col-right">
+      <div class="ingame-right">
+        <div class="status-bar">Your turn — White</div>
+        <div class="cap-wrap">
+          <div class="cap-label">Captured by White</div>
+          <div class="cap-pieces">♟♟♟ <span style="color:#d4a84b;font-size:0.65rem;font-weight:700">+3</span></div>
+        </div>
+        <div class="move-list-wrap">
+          <div class="move-row"><span class="move-num">1.</span><span class="move-san">e4</span><span class="move-san" style="margin-left:6px">e5</span></div>
+          <div class="move-row"><span class="move-num">2.</span><span class="move-san">Nf3</span><span class="move-san" style="margin-left:6px">Nc6</span></div>
+          <div class="move-row"><span class="move-num">3.</span><span class="move-san">Bb5</span><span class="move-san" style="margin-left:6px">a6</span></div>
+          <div class="move-row"><span class="move-num">4.</span><span class="move-san">Ba4</span><span class="move-san" style="margin-left:6px">Nf6</span></div>
+          <div class="move-row"><span class="move-num">5.</span><span class="move-san">O-O</span><span class="move-san" style="margin-left:6px">Be7</span></div>
+          <div class="move-row"><span class="move-num">6.</span><span class="move-san">Re1</span><span class="move-san" style="margin-left:6px">b5</span></div>
+          <div class="move-row"><span class="move-num">7.</span><span class="move-san">Bb3</span><span class="move-san" style="margin-left:6px">d6</span></div>
+          <div class="move-row"><span class="move-num">8.</span><span class="move-san">c3</span><span class="move-san" style="margin-left:6px">—</span></div>
+        </div>
+        <div class="cap-wrap">
+          <div class="cap-label">Captured by Black</div>
+          <div class="cap-pieces">♙</div>
+        </div>
+        <div class="game-actions">
+          <button class="btn btn-secondary">←</button>
+          <button class="btn btn-secondary">→</button>
+          <button class="btn btn-secondary" style="color:#c0392b;border-color:#7a1a1a;flex:2">Resign</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  const pieces = {
+    '00':'♜','10':'♞','20':'♝','30':'♛','40':'♚','50':'♝','60':'♞','70':'♜',
+    '01':'♟','11':'♟','21':'♟','31':'♟','41':'♟','51':'♟','61':'♟','71':'♟',
+    '06':'♙','16':'♙','26':'♙','36':'♙','46':'♙','56':'♙','66':'♙','76':'♙',
+    '07':'♖','17':'♘','27':'♗','37':'♕','47':'♔','57':'♗','67':'♘','77':'♖',
+  };
+  const board = document.getElementById('board');
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const sq = document.createElement('div');
+      sq.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      const p = pieces[`${c}${r}`];
+      if (p) { sq.classList.add('piece'); sq.textContent = p; }
+      board.appendChild(sq);
+    }
+  }
+
+  function show(view) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.getElementById('view-' + view).classList.add('active');
+    document.querySelectorAll('.proto-nav button').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && view === 'lobby') || (i === 1 && view === 'ingame'));
+    });
+  }
+</script>
+</body>
+</html>

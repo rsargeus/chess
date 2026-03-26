@@ -1347,6 +1347,7 @@
       #move-list { max-height: 160px; }
 
       /* Modals fit narrow screens */
+
       .modal {
         padding: 24px 20px;
         min-width: 0;
@@ -1355,6 +1356,82 @@
       .modal-options { flex-direction: column; }
       .btn-mode { flex-direction: row; gap: 10px; padding: 12px 16px; }
       .btn-mode .mode-icon { font-size: 1.4rem; }
+    }
+
+    /* ── Landscape mobile: profile card moves next to board ── */
+    @media (orientation: landscape) and (max-height: 500px) {
+      html { height: 100%; overflow: hidden; }
+      body { height: 100%; min-height: unset; overflow: hidden; }
+
+      header { padding: 0 12px; height: 40px; }
+
+      /* Sidebar becomes overlay so full width is free for board + card */
+      .sidebar {
+        position: fixed;
+        top: 0; left: -100%; width: 280px; height: 100%;
+        z-index: 50; transition: left 0.25s ease;
+        border-right: 1px solid #5c3610;
+      }
+      .sidebar.open { left: 0; }
+      #sidebar-toggle-btn { display: flex !important; }
+
+      .layout { flex-direction: row; overflow: hidden; height: auto; flex: 1; }
+
+      .main {
+        flex-direction: row; flex-wrap: nowrap;
+        align-items: center; justify-content: center;
+        overflow: hidden; padding: 8px; gap: 10px; height: 100%; width: 100%;
+      }
+
+      /* board-column becomes a row: board | profile-card */
+      .board-column {
+        flex-direction: row; align-items: center; gap: 10px; flex-shrink: 0;
+      }
+
+      .board-wrap { flex-shrink: 0; }
+
+      /* Board sized by available height */
+      .board {
+        width: calc(100dvh - 40px - 16px);
+        height: calc(100dvh - 40px - 16px);
+      }
+      .board-wrap.empty::before {
+        width: calc(100dvh - 40px - 16px);
+        height: calc(100dvh - 40px - 16px);
+      }
+
+      /* Profile card: same size as board */
+      #profile-card {
+        width: calc(100dvh - 40px - 16px);
+        height: calc(100dvh - 40px - 16px);
+        flex-shrink: 0;
+        margin-top: 0;
+        align-self: center;
+        flex-direction: column;
+        align-items: center;
+        padding: 10px 12px;
+        gap: 0;
+        text-align: center;
+        justify-content: center;
+      }
+      #profile-card .profile-avatar {
+        width: 44px; height: 44px; font-size: 1.4rem; margin-bottom: 6px;
+      }
+      #profile-card .profile-display-name { font-size: 0.85rem; margin-bottom: 4px; }
+      #profile-card .profile-rank-badge { align-self: center; }
+      #profile-card .profile-identity-sub { justify-content: center; }
+      #profile-card .profile-card-divider {
+        display: block; width: 100%; height: 1px; background: #2a1808; margin: 8px 0;
+      }
+      #profile-card .profile-stats { width: 100%; border: none; border-radius: 0; padding: 0; }
+      #profile-card .profile-stat {
+        flex: 1; padding: 0 4px; border-left: 1px solid #2a1808; height: 44px;
+      }
+      #profile-card .profile-stat:first-child { border-left: none; }
+      #profile-card .profile-stat-value { font-size: 1.1rem; }
+      #profile-card .profile-stat-label { font-size: 0.5rem; margin-top: 2px; }
+      #profile-card .profile-edit-desktop { display: flex; }
+      #profile-card .profile-edit-mobile { display: none; }
     }
 
     /* Captured pieces */
