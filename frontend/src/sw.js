@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chess-arena-v1';
+const CACHE_NAME = 'chess-arena-v2';
 
 const APP_SHELL = [
   '/',
