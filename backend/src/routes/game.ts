@@ -1,6 +1,16 @@
 import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
 import * as store from '../gameStore';
 import { broadcastToGame } from '../wsServer';
+
+function validObjectId(id: string): boolean {
+  return mongoose.Types.ObjectId.isValid(id);
+}
+
+function safeHttpStatus(status: unknown): number {
+  return typeof status === 'number' && Number.isInteger(status) && status >= 400 && status < 600
+    ? status : 500;
+}
 
 const router = Router();
 
@@ -32,7 +42,7 @@ router.post('/join/:inviteCode', async (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid invite code' });
   }
   const result = await store.joinGame(req.params.inviteCode, userId(req));
-  if ('error' in result) return res.status(result.status as number).json({ error: result.error });
+  if ('error' in result) return res.status(safeHttpStatus(result.status)).json({ error: result.error });
   broadcastToGame(result.gameId, { type: 'opponent_joined', gameId: result.gameId });
   res.json(result);
 });
@@ -43,24 +53,27 @@ router.get('/', async (req: Request, res: Response) => {
 });
 
 router.get('/:gameId', async (req: Request, res: Response) => {
+  if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
   const game = await store.getGame(req.params.gameId, userId(req));
   if (!game) return res.status(404).json({ error: 'Game not found' });
   res.json(game);
 });
 
 router.post('/:gameId/moves', async (req: Request, res: Response) => {
+  if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
   const { from, to } = req.body;
   if (!from || !to) return res.status(400).json({ error: 'from and to are required' });
   if (!/^[a-h][1-8]$/.test(from) || !/^[a-h][1-8]$/.test(to)) {
     return res.status(400).json({ error: 'Invalid move coordinates' });
   }
   const result = await store.applyMove(req.params.gameId, from, to, userId(req));
-  if ('error' in result) return res.status(result.status as number).json({ error: result.error });
+  if ('error' in result) return res.status(safeHttpStatus(result.status)).json({ error: result.error });
   broadcastToGame(req.params.gameId, { type: 'move', gameId: req.params.gameId });
-  res.json(result);
+  res.status(200).json(result);
 });
 
 router.delete('/:gameId', async (req: Request, res: Response) => {
+  if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
   const ok = await store.resignGame(req.params.gameId, userId(req));
   if (!ok) return res.status(404).json({ error: 'Game not found' });
   broadcastToGame(req.params.gameId, { type: 'resigned', gameId: req.params.gameId });

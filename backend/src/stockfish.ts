@@ -42,13 +42,21 @@ class StockfishEngine {
   private waitFor(pred: (line: string) => boolean, timeoutMs = 10000): Promise<string> {
     return new Promise((resolve, reject) => {
       let settled = false;
+      let listener: ((line: string) => boolean) | null = null;
+
+      const cleanup = () => {
+        this.listeners = this.listeners.filter(fn => fn !== listener);
+      };
+
       const timer = setTimeout(() => {
         if (settled) return;
         settled = true;
+        cleanup();
         this.send('stop');
-        reject(new Error(`Stockfish timeout waiting for response`));
+        reject(new Error('Stockfish timeout waiting for response'));
       }, timeoutMs);
-      this.listeners.push((line) => {
+
+      listener = (line: string) => {
         if (pred(line)) {
           if (!settled) {
             settled = true;
@@ -58,7 +66,9 @@ class StockfishEngine {
           return true;
         }
         return false;
-      });
+      };
+
+      this.listeners.push(listener);
     });
   }
 

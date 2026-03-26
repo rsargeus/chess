@@ -32,7 +32,9 @@ async function connect(gameId: string): Promise<void> {
     try {
       const event = JSON.parse(ev.data);
       handler?.(event);
-    } catch { /* ignore */ }
+    } catch {
+      console.warn('[ws] Failed to parse message:', ev.data);
+    }
   };
 
   ws.onclose = () => {

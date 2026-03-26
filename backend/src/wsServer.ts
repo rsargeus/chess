@@ -6,6 +6,22 @@ import { Game } from './models/Game';
 // gameId → connected sockets
 const rooms = new Map<string, Set<WebSocket>>();
 
+// Per-IP failed auth tracking to prevent connection spam
+const failedAuthByIp = new Map<string, { count: number; resetAt: number }>();
+const MAX_FAILED_AUTH = 10;
+const FAILED_AUTH_WINDOW_MS = 60_000;
+
+function recordFailedAuth(ip: string): boolean {
+  const now = Date.now();
+  const entry = failedAuthByIp.get(ip);
+  if (!entry || entry.resetAt < now) {
+    failedAuthByIp.set(ip, { count: 1, resetAt: now + FAILED_AUTH_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > MAX_FAILED_AUTH;
+}
+
 const JWKS = createRemoteJWKSet(
   new URL(`https://${process.env.AUTH0_DOMAIN}/.well-known/jwks.json`)
 );
@@ -38,7 +54,14 @@ function addToRoom(gameId: string, ws: WebSocket): void {
 export function initWebSocketServer(server: Server): void {
   const wss = new WebSocketServer({ server });
 
-  wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
+  wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    const ip = req.socket.remoteAddress ?? 'unknown';
+
+    if (recordFailedAuth(ip)) {
+      ws.close(1008, 'Too many failed attempts');
+      return;
+    }
+
     // Expect first message: { type: 'auth', token: JWT, gameId: string }
     const authTimeout = setTimeout(() => ws.close(1008, 'Auth timeout'), 5000);
 
@@ -46,13 +69,25 @@ export function initWebSocketServer(server: Server): void {
       clearTimeout(authTimeout);
       try {
         const { token, gameId } = JSON.parse(data.toString());
-        if (!token || !gameId) { ws.close(1008, 'token and gameId required'); return; }
+        if (!token || !gameId) {
+          recordFailedAuth(ip);
+          ws.close(1008, 'token and gameId required');
+          return;
+        }
 
         const userId = await verifyToken(token);
-        if (!userId) { ws.close(1008, 'Invalid token'); return; }
+        if (!userId) {
+          recordFailedAuth(ip);
+          ws.close(1008, 'Invalid token');
+          return;
+        }
 
         const game = await Game.findById(gameId).lean();
-        if (!game || !canAccess(game, userId)) { ws.close(1008, 'Access denied'); return; }
+        if (!game || !canAccess(game, userId)) {
+          recordFailedAuth(ip);
+          ws.close(1008, 'Access denied');
+          return;
+        }
 
         addToRoom(gameId, ws);
         (ws as any).isAlive = true;
@@ -60,6 +95,7 @@ export function initWebSocketServer(server: Server): void {
         // Close connection after 1 hour to force token re-validation
         setTimeout(() => ws.close(1001, 'Session expired'), 60 * 60 * 1000);
       } catch {
+        recordFailedAuth(ip);
         ws.close(1008, 'Auth failed');
       }
     });
@@ -74,7 +110,11 @@ export function initWebSocketServer(server: Server): void {
     });
   }, 30_000);
 
-  wss.on('close', () => clearInterval(interval));
+  wss.on('close', () => {
+    clearInterval(interval);
+    rooms.clear();
+    failedAuthByIp.clear();
+  });
 }
 
 export function broadcastToGame(gameId: string, event: object): void {

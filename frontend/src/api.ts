@@ -88,9 +88,13 @@ export async function postMove(gameId: string, from: string, to: string): Promis
     headers: { 'Content-Type': 'application/json', ...await authHeaders() },
     body: JSON.stringify({ from, to }),
   });
-  const data = await res.json();
-  if (!res.ok) { handleUnauthorized(res); throw new Error(data.error ?? 'Invalid move'); }
-  return data;
+  if (!res.ok) {
+    handleUnauthorized(res);
+    let errorMsg = 'Invalid move';
+    try { const d = await res.json(); errorMsg = d.error ?? errorMsg; } catch {}
+    throw new Error(errorMsg);
+  }
+  return res.json();
 }
 
 export async function resignGame(gameId: string): Promise<void> {

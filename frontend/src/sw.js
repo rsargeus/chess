@@ -44,6 +44,7 @@ self.addEventListener('fetch', (event) => {
       url.pathname.startsWith('/checkout') || url.pathname.startsWith('/health')) {
     event.respondWith(
       fetch(event.request).catch(() => new Response('{"error":"offline"}', {
+        status: 503,
         headers: { 'Content-Type': 'application/json' },
       }))
     );
