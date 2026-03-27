@@ -34,7 +34,16 @@ export async function isAuthenticated(): Promise<boolean> {
 
 export async function getToken(): Promise<string> {
   if (!_client) throw new Error('Auth not initialized');
-  return _client.getTokenSilently();
+  try {
+    return await _client.getTokenSilently();
+  } catch (err: any) {
+    // Refresh token missing or expired — force re-login
+    if (err?.error === 'missing_refresh_token' || err?.message?.includes('Missing Refresh Token')) {
+      await _client.logout({ logoutParams: { returnTo: window.location.origin } });
+      throw err;
+    }
+    throw err;
+  }
 }
 
 function parseRolesFromToken(token: string): string[] {
