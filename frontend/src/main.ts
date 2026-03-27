@@ -26,6 +26,7 @@ let moveHistory: string[] = [];
 let moveRecords: api.MoveRecord[] = [];
 let viewIndex = 0;
 let currentPlayerColor: 'w' | 'b' | null = null; // null = not multiplayer
+let currentMode: api.GameMode | null = null;
 let submittingMove = false;
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
@@ -53,9 +54,17 @@ const panelEl           = document.querySelector<HTMLElement>('.panel')!;
 
 // Coach panel elements
 const coachPanelEl  = document.getElementById('coach-panel')!;
+const coachEvalWrapEl = document.getElementById('coach-eval-wrap')!;
 const coachEvalFill = document.getElementById('coach-eval-fill') as HTMLElement;
 const coachScoreEl  = document.getElementById('coach-score')!;
 const coachQualityEl = document.getElementById('coach-quality')!;
+const coachPlayerSanEl = document.getElementById('coach-player-san')!;
+const coachOppPanelEl = document.getElementById('coach-opp-panel')!;
+const coachOppQualityEl = document.getElementById('coach-opp-quality')!;
+const coachOppSanEl = document.getElementById('coach-opp-san')!;
+const coachOppBestSanEl = document.getElementById('coach-opp-best-san')!;
+const undoBtnEl = document.getElementById('undo-btn') as HTMLButtonElement;
+const evalToggleBtnEl = document.getElementById('eval-toggle-btn') as HTMLButtonElement;
 const coachBestSanEl = document.getElementById('coach-best-san')!;
 const coachSpinnerEl = document.getElementById('coach-spinner')!;
 
@@ -249,6 +258,14 @@ function isFlipped(): boolean {
   return currentPlayerColor === 'b';
 }
 
+function setGameUrl(gameId: string): void {
+  history.replaceState({}, '', `?game=${gameId}`);
+}
+
+function clearGameUrl(): void {
+  history.replaceState({}, '', window.location.pathname);
+}
+
 function beginGame(state: api.GameState): void {
   stopLobbyMusic();
   hideProfileCard();
@@ -257,6 +274,8 @@ function beginGame(state: api.GameState): void {
   muteBtn.classList.add('hidden');
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
+  currentMode = state.mode;
+  setGameUrl(state.gameId);
   gameIsActive = true;
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
@@ -264,6 +283,8 @@ function beginGame(state: api.GameState): void {
   moveListEl.classList.remove('hidden');
   newGameBtn.classList.add('hidden');
   lobbyBtn.classList.remove('hidden');
+  if (state.mode === 'vs_computer') undoBtnEl.classList.remove('hidden');
+  else undoBtnEl.classList.add('hidden');
   board = new Board(boardEl, handleMove);
   const interactive = isMyTurn(state.turn, state.mode, state.waitingForOpponent);
   board.setFen(state.fen, interactive, isFlipped(), null);
@@ -288,6 +309,8 @@ async function loadGame(gameId: string): Promise<void> {
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
+  currentMode = state.mode;
+  setGameUrl(state.gameId);
   overlayEl.classList.add('hidden');
   boardEl.parentElement!.classList.remove('empty');
   const active = ['active', 'check'].includes(state.status);
@@ -301,6 +324,12 @@ async function loadGame(gameId: string): Promise<void> {
   }
   lobbyBtn.classList.remove('hidden');
   moveListEl.classList.remove('hidden');
+  if (state.mode === 'vs_computer') {
+    undoBtnEl.classList.remove('hidden');
+    undoBtnEl.disabled = state.moves.length === 0;
+  } else {
+    undoBtnEl.classList.add('hidden');
+  }
   board = new Board(boardEl, handleMove);
   const interactive = active && isMyTurn(state.turn, state.mode, state.waitingForOpponent);
   board.setFen(state.fen, interactive, isFlipped(), lastMoveOf(state.moves));
@@ -310,6 +339,27 @@ async function loadGame(gameId: string): Promise<void> {
   updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
   renderMoveList(state.moves);
   updateCapturedPieces(state.fen);
+  // Find player's last move index for quality analysis
+  let playerLastMoveIdx = -1;
+  for (let i = state.moves.length - 1; i >= 0; i--) {
+    if ((i % 2 === 0) === (currentPlayerColor === 'w' || currentPlayerColor === null)) {
+      playerLastMoveIdx = i; break;
+    }
+  }
+  if (playerLastMoveIdx >= 0) {
+    const playerLastMove = state.moves[playerLastMoveIdx];
+    const analysisPrevFen = playerLastMoveIdx === 0 ? INITIAL_FEN : state.moves[playerLastMoveIdx - 1].fenAfter;
+    runCoachAnalysis(playerLastMove.fenAfter, analysisPrevFen, playerLastMove.san)
+      .then(() => { if (playerLastMove.fenAfter !== state.fen) return runCoachAnalysis(state.fen); })
+      .catch(() => {});
+  } else {
+    runCoachAnalysis(state.fen).catch(() => {});
+  }
+  if (state.mode === 'vs_computer' && state.moves.length >= 2) {
+    const lastMove = state.moves[state.moves.length - 1];
+    const prevFen  = state.moves[state.moves.length - 2].fenAfter;
+    runOpponentAnalysis(state.fen, prevFen, lastMove.san).catch(() => {});
+  }
   if (state.mode === 'multiplayer') {
     connectToGame(state.gameId, handleWsEvent);
   }
@@ -380,9 +430,22 @@ async function handleMove(from: string, to: string): Promise<void> {
     }
     refreshGameList();
 
-    // Coach analysis — fire after move is applied, don't block the UI
-    const prevFen = moveHistory[moveHistory.length - 2];
-    runCoachAnalysis(result.fen, prevFen).catch(() => {});
+    // Coach analysis — always analyse the player's own move, not the computer's response.
+    // If the computer replied, result.fen is after the computer's move; use result.move.fenAfter
+    // (the position right after the player moved) and the FEN one step further back as previous.
+    const hasComputerReply = !!result.computerMove;
+    const analysisFen     = hasComputerReply ? result.move.fenAfter : result.fen;
+    const analysisPrevFen = moveHistory[moveHistory.length - 2 - (hasComputerReply ? 1 : 0)];
+    // Analyse player's move (quality + best alternative), then update coach for final position
+    // Player move quality + eval update after computer reply — run in parallel
+    const playerAnalysis = runCoachAnalysis(analysisFen, analysisPrevFen, result.move.san)
+      .then(() => { if (hasComputerReply) return runCoachAnalysis(result.fen); });
+    const oppAnalysis = hasComputerReply && result.computerMove
+      ? runOpponentAnalysis(result.fen, result.move.fenAfter, result.computerMove.san)
+      : Promise.resolve();
+    Promise.all([playerAnalysis, oppAnalysis]).catch(() => {});
+
+    if (currentMode === 'vs_computer') undoBtnEl.disabled = false;
   } catch (err: any) {
     try {
       const state = await api.getGame(currentGameId!);
@@ -436,49 +499,83 @@ function lastMoveOf(moves: api.MoveRecord[]): { from: string; to: string } | nul
 }
 
 // ── Coach panel ──────────────────────────────────────────────
+// Eval bar toggle — persisted in localStorage
+let evalBarVisible = localStorage.getItem('evalBarVisible') !== 'false';
+function applyEvalBarVisibility(): void {
+  if (evalBarVisible) {
+    coachEvalWrapEl.classList.remove('hidden');
+    evalToggleBtnEl.classList.add('active');
+  } else {
+    coachEvalWrapEl.classList.add('hidden');
+    evalToggleBtnEl.classList.remove('active');
+  }
+}
+evalToggleBtnEl.addEventListener('click', () => {
+  evalBarVisible = !evalBarVisible;
+  localStorage.setItem('evalBarVisible', String(evalBarVisible));
+  applyEvalBarVisibility();
+});
+
 const QUALITY_LABELS: Record<string, string> = {
-  excellent:  '⭐ Utmärkt drag',
-  good:       '✓ Bra drag',
-  inaccuracy: '⚠ Inexakthet',
-  mistake:    '✗ Misstag',
+  excellent:  '⭐ Excellent',
+  good:       '✓ Good move',
+  inaccuracy: '⚠ Inaccuracy',
+  mistake:    '✗ Mistake',
   blunder:    '💥 Blunder',
 };
 
 function showCoachPanel(): void {
+  applyEvalBarVisibility();
   coachPanelEl.classList.remove('hidden');
   coachScoreEl.textContent = '—';
-  coachQualityEl.textContent = '';
+  coachQualityEl.textContent = '—';
   coachQualityEl.className = '';
+  coachPlayerSanEl.textContent = '—';
   coachBestSanEl.textContent = '—';
   coachEvalFill.style.width = '50%';
+  coachOppPanelEl.classList.remove('hidden');
+  coachOppQualityEl.textContent = '';
+  coachOppQualityEl.className = '';
+  coachOppSanEl.textContent = '—';
+  coachOppBestSanEl.textContent = '—';
+  undoBtnEl.disabled = true;
 }
 
 function hideCoachPanel(): void {
+  coachEvalWrapEl.classList.add('hidden');
   coachPanelEl.classList.add('hidden');
+  coachOppPanelEl.classList.add('hidden');
+  undoBtnEl.classList.add('hidden');
 }
 
-async function runCoachAnalysis(fen: string, previousFen?: string): Promise<void> {
+function applyEvalToBar(scoreCp: number): void {
+  const clamped = Math.max(-600, Math.min(600, scoreCp));
+  const pct = Math.round(((clamped + 600) / 1200) * 100);
+  coachEvalFill.style.width = `${pct}%`;
+  const abs = Math.abs(scoreCp);
+  if (abs >= 9900) {
+    coachScoreEl.textContent = scoreCp > 0 ? 'Mate (White)' : 'Mate (Black)';
+  } else {
+    const sign = scoreCp > 0 ? '+' : scoreCp < 0 ? '−' : '';
+    coachScoreEl.textContent = `${sign}${(abs / 100).toFixed(1)}`;
+  }
+}
+
+async function refreshEvalBar(fen: string): Promise<void> {
+  try {
+    const result = await api.analyzePosition(fen);
+    applyEvalToBar(result.scoreCp);
+  } catch { /* keep previous value */ }
+}
+
+async function runCoachAnalysis(fen: string, previousFen?: string, playerMoveSan?: string): Promise<void> {
   coachSpinnerEl.classList.remove('hidden');
-  coachQualityEl.textContent = '';
-  coachQualityEl.className = '';
+  if (previousFen !== undefined) { coachQualityEl.textContent = '—'; coachQualityEl.className = ''; }
+  if (playerMoveSan !== undefined) coachPlayerSanEl.textContent = playerMoveSan;
   coachBestSanEl.textContent = '—';
   try {
     const result = await api.analyzePosition(fen, previousFen);
-
-    // Eval bar: scoreCp from white's perspective. Clamp to ±600cp for display.
-    const clamped = Math.max(-600, Math.min(600, result.scoreCp));
-    const pct = Math.round(((clamped + 600) / 1200) * 100);
-    coachEvalFill.style.width = `${pct}%`;
-
-    // Score text
-    const abs = Math.abs(result.scoreCp);
-    if (abs >= 9900) {
-      const side = result.scoreCp > 0 ? 'Vit' : 'Svart';
-      coachScoreEl.textContent = `Mat (${side})`;
-    } else {
-      const sign = result.scoreCp > 0 ? '+' : result.scoreCp < 0 ? '−' : '';
-      coachScoreEl.textContent = `${sign}${(Math.abs(result.scoreCp) / 100).toFixed(1)}`;
-    }
+    applyEvalToBar(result.scoreCp);
 
     // Move quality
     if (result.moveQuality) {
@@ -494,6 +591,21 @@ async function runCoachAnalysis(fen: string, previousFen?: string): Promise<void
     coachSpinnerEl.classList.add('hidden');
   }
 }
+async function runOpponentAnalysis(fen: string, previousFen: string, oppMoveSan: string): Promise<void> {
+  coachOppQualityEl.textContent = '';
+  coachOppQualityEl.className = '';
+  coachOppSanEl.textContent = oppMoveSan;
+  coachOppBestSanEl.textContent = '—';
+  try {
+    const result = await api.analyzePosition(fen, previousFen);
+    if (result.moveQuality) {
+      coachOppQualityEl.textContent = QUALITY_LABELS[result.moveQuality] ?? '';
+      coachOppQualityEl.className = `quality-${result.moveQuality}`;
+    }
+    coachOppBestSanEl.textContent = result.bestMoveSan ?? result.bestMove;
+  } catch { /* keep —  */ }
+}
+
 // ─────────────────────────────────────────────────────────────
 
 function setMoveHistory(moves: api.MoveRecord[]): void {
@@ -517,6 +629,26 @@ function navigateTo(index: number): void {
   updateNavButtons();
   highlightMoveInList(viewIndex - 1); // viewIndex 0 = before any moves
   updateCapturedPieces(moveHistory[viewIndex]);
+
+  // Update coach panels for the move that brought us to this position
+  const fen = moveHistory[viewIndex];
+  if (viewIndex === 0) {
+    coachQualityEl.textContent = '—'; coachQualityEl.className = '';
+    coachPlayerSanEl.textContent = '—'; coachBestSanEl.textContent = '—';
+    coachOppQualityEl.textContent = ''; coachOppQualityEl.className = '';
+    coachOppSanEl.textContent = '—'; coachOppBestSanEl.textContent = '—';
+    refreshEvalBar(fen);
+  } else {
+    const prevFen = moveHistory[viewIndex - 1];
+    const move = moveRecords[viewIndex - 1];
+    const isPlayerMove = ((viewIndex - 1) % 2 === 0) === (currentPlayerColor === 'w' || currentPlayerColor === null);
+    if (isPlayerMove) {
+      runCoachAnalysis(fen, prevFen, move.san).catch(() => {});
+    } else {
+      runOpponentAnalysis(fen, prevFen, move.san).catch(() => {});
+      refreshEvalBar(fen);
+    }
+  }
 }
 
 function highlightMoveInList(moveIdx: number): void {
@@ -532,12 +664,15 @@ function renderMoveList(moves: api.MoveRecord[]): void {
     const num = document.createElement('span');
     num.className = 'move-num';
     num.textContent = `${Math.floor(i / 2) + 1}.`;
+
     const w = document.createElement('span');
     w.className = 'move-san';
     w.textContent = moves[i].san;
+    w.addEventListener('click', () => navigateTo(i + 1));
     const b = document.createElement('span');
     b.className = 'move-san';
     b.textContent = moves[i + 1]?.san ?? '';
+    if (moves[i + 1]) b.addEventListener('click', () => navigateTo(i + 2));
     row.append(num, w, b);
     moveListEl.appendChild(row);
   }
@@ -614,6 +749,7 @@ function showOverlay(status: string): void {
 
 function returnToStart(): void {
   disconnectFromGame();
+  clearGameUrl();
   panelEl.classList.add('hidden');
   hideCoachPanel();
   showProfileCard(userNameEl.textContent ?? '');
@@ -796,6 +932,25 @@ resignBtn.addEventListener('click', async () => {
   refreshGameList();
 });
 
+undoBtnEl.addEventListener('click', async () => {
+  if (!currentGameId) return;
+  undoBtnEl.disabled = true;
+  try {
+    const state = await api.undoMove(currentGameId);
+    setMoveHistory(state.moves);
+    board!.setFen(state.fen, true, isFlipped(), lastMoveOf(state.moves));
+    updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+    renderMoveList(state.moves);
+    updateCapturedPieces(state.fen);
+    showCoachPanel();
+    refreshGameList();
+    undoBtnEl.disabled = state.moves.length === 0;
+  } catch (err: any) {
+    statusEl.textContent = err.message;
+    undoBtnEl.disabled = false;
+  }
+});
+
 const lobbyBtn = document.getElementById('lobby-btn')!;
 lobbyBtn.classList.add('hidden');
 lobbyBtn.addEventListener('click', returnToStart);
@@ -848,6 +1003,7 @@ async function boot(): Promise<void> {
       const params = new URLSearchParams(window.location.search);
       const paymentSuccess = params.get('payment') === 'success';
       const joinCode = params.get('join');
+      const deepGameId = params.get('game');
       history.replaceState({}, '', window.location.pathname);
       await showApp(paymentSuccess);
       if (joinCode) {
@@ -856,6 +1012,12 @@ async function boot(): Promise<void> {
           beginGame(state);
         } catch (e: any) {
           statusEl.textContent = e.message ?? 'Failed to join game';
+        }
+      } else if (deepGameId) {
+        try {
+          await loadGame(deepGameId);
+        } catch {
+          // Game not found or no access — stay in lobby
         }
       }
       return;

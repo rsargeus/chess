@@ -72,6 +72,13 @@ router.post('/:gameId/moves', async (req: Request, res: Response) => {
   res.status(200).json(result);
 });
 
+router.post('/:gameId/undo', async (req: Request, res: Response) => {
+  if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
+  const result = await store.undoMove(req.params.gameId, userId(req));
+  if ('error' in result) return res.status(safeHttpStatus(result.status)).json({ error: result.error });
+  res.json(result);
+});
+
 router.delete('/:gameId', async (req: Request, res: Response) => {
   if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
   const ok = await store.resignGame(req.params.gameId, userId(req));

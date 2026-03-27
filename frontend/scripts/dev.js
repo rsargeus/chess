@@ -26,7 +26,7 @@ esbuild.context({
 
   http.createServer((req, res) => {
     // Proxy /games and /checkout to backend
-    if (req.url.startsWith('/games') || req.url.startsWith('/checkout') || req.url.startsWith('/me') || req.url.startsWith('/webhooks') || req.url.startsWith('/health')) {
+    if (req.url.startsWith('/games') || req.url.startsWith('/checkout') || req.url.startsWith('/me') || req.url.startsWith('/webhooks') || req.url.startsWith('/health') || req.url.startsWith('/analyze')) {
       const options = {
         hostname: 'localhost',
         port: 3000,

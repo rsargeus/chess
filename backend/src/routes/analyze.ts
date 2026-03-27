@@ -10,9 +10,11 @@ const MISTAKE_CP = 100;
 const INACCURACY_CP = 50;
 
 function classifyMove(prevCp: number, currCp: number, movedColor: 'w' | 'b'): string {
-  // Express both scores from the perspective of who just moved
-  const before = movedColor === 'w' ? prevCp : -prevCp;
-  const after  = movedColor === 'w' ? currCp : -currCp;
+  // Stockfish always reports score from the side-to-move's perspective.
+  // prevCp: movedColor is to move → positive = movedColor winning
+  // currCp: opponent is to move  → positive = opponent winning, so negate for movedColor
+  const before = movedColor === 'w' ? prevCp  : -prevCp;
+  const after  = movedColor === 'w' ? -currCp :  currCp;
   const drop = before - after;
 
   if (drop >= BLUNDER_CP)   return 'blunder';
@@ -40,26 +42,41 @@ router.post('/', async (req: Request, res: Response) => {
       previousFen && typeof previousFen === 'string' ? analyzePosition(previousFen) : null,
     ]);
 
-    // Convert best move (UCI) to SAN
-    let bestMoveSan: string | null = null;
-    try {
-      const chess = new Chess(fen);
-      const move = chess.move({ from: current.bestMove.slice(0, 2), to: current.bestMove.slice(2, 4), promotion: current.bestMove[4] });
-      bestMoveSan = move?.san ?? null;
-    } catch { /* position might be game-over */ }
-
-    // Determine move quality if we have the previous position
+    // Determine move quality + best alternative if we have the previous position
     let moveQuality: string | null = null;
+    let bestMove = current.bestMove;
+    let bestMoveSan: string | null = null;
+
     if (previous) {
       // The side that just moved is indicated by the turn in previousFen
       const prevChess = new Chess(previousFen);
-      const movedColor = prevChess.turn(); // 'w' or 'b'
+      const movedColor = prevChess.turn();
       moveQuality = classifyMove(previous.scoreCp, current.scoreCp, movedColor);
+
+      // "Best move" = what the player should have played (from the previous position)
+      bestMove = previous.bestMove;
+      try {
+        const chess2 = new Chess(previousFen);
+        const m = chess2.move({ from: previous.bestMove.slice(0, 2), to: previous.bestMove.slice(2, 4), promotion: previous.bestMove[4] });
+        bestMoveSan = m?.san ?? null;
+      } catch { /* game-over position */ }
+    } else {
+      // No previous position — show best move from current position
+      try {
+        const chess = new Chess(fen);
+        const m = chess.move({ from: current.bestMove.slice(0, 2), to: current.bestMove.slice(2, 4), promotion: current.bestMove[4] });
+        bestMoveSan = m?.san ?? null;
+      } catch { /* game-over position */ }
     }
 
+    // Normalise scoreCp to white's perspective (positive = white winning).
+    // Stockfish always returns from the side-to-move's perspective, so negate when it's black's turn.
+    const turn = new Chess(fen).turn();
+    const scoreCp = turn === 'w' ? current.scoreCp : -current.scoreCp;
+
     res.json({
-      scoreCp: current.scoreCp,
-      bestMove: current.bestMove,
+      scoreCp,
+      bestMove,
       bestMoveSan,
       moveQuality,
     });

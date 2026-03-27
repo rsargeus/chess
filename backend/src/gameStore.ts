@@ -236,6 +236,47 @@ export async function applyMove(gameId: string, from: string, to: string, userId
   };
 }
 
+export async function undoMove(gameId: string, userId: string) {
+  const game = await Game.findById(gameId);
+  if (!game) return { error: 'Game not found', status: 404 };
+  if (!canAccess(game, userId)) return { error: 'Game not found', status: 404 };
+  if (game.mode !== 'vs_computer') return { error: 'Undo is only available in vs Computer mode', status: 400 };
+
+  // Find the last 2 moves (player + computer response), or 1 if only 1 exists
+  const lastMoves = await Move.find({ gameId: game._id }).sort({ moveNumber: -1 }).limit(2).lean();
+  if (lastMoves.length === 0) return { error: 'No moves to undo', status: 400 };
+
+  // The FEN to restore is either the fenAfter of the move before these, or the initial FEN
+  const minMoveNumber = Math.min(...lastMoves.map(m => m.moveNumber));
+  const prevMove = await Move.findOne({ gameId: game._id, moveNumber: { $lt: minMoveNumber } })
+    .sort({ moveNumber: -1 }).lean();
+  const restoredFen = prevMove ? prevMove.fenAfter : new Chess().fen();
+
+  await Move.deleteMany({ gameId: game._id, moveNumber: { $gte: minMoveNumber } });
+
+  const chess = new Chess(restoredFen);
+  game.fen = restoredFen;
+  game.status = deriveStatus(chess);
+  await game.save();
+
+  const remainingMoves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();
+  return {
+    gameId: game._id.toString(),
+    fen: restoredFen,
+    turn: chess.turn() as 'w' | 'b',
+    status: game.status,
+    mode: game.mode,
+    computerLevel: game.computerLevel,
+    inviteCode: game.inviteCode,
+    playerColor: null as 'w' | 'b' | null,
+    waitingForOpponent: false,
+    moves: remainingMoves.map(m => ({
+      moveNumber: m.moveNumber, from: m.from, to: m.to,
+      san: m.san, fenAfter: m.fenAfter, playedAt: m.playedAt,
+    })),
+  };
+}
+
 export async function resignGame(gameId: string, userId?: string) {
   const game = await Game.findById(gameId);
   if (!game) return false;

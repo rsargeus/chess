@@ -97,6 +97,18 @@ export async function postMove(gameId: string, from: string, to: string): Promis
   return res.json();
 }
 
+export async function undoMove(gameId: string): Promise<GameState> {
+  const res = await fetch(`${BASE}/${gameId}/undo`, {
+    method: 'POST',
+    headers: await authHeaders(),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? 'Failed to undo move');
+  }
+  return res.json();
+}
+
 export async function resignGame(gameId: string): Promise<void> {
   await fetch(`${BASE}/${gameId}`, { method: 'DELETE', headers: await authHeaders() });
 }
