@@ -144,6 +144,23 @@ export async function saveProfile(data: UserProfileData): Promise<UserProfileDat
   return res.json();
 }
 
+export interface AnalysisResult {
+  scoreCp: number;
+  bestMove: string;
+  bestMoveSan: string | null;
+  moveQuality: 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | null;
+}
+
+export async function analyzePosition(fen: string, previousFen?: string): Promise<AnalysisResult> {
+  const res = await fetch(`${API_BASE}/analyze`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...await authHeaders() },
+    body: JSON.stringify({ fen, previousFen }),
+  });
+  if (!res.ok) throw new Error('Analysis failed');
+  return res.json();
+}
+
 export async function createCheckoutSession(): Promise<string> {
   const res = await fetch(`${API_BASE}/checkout`, {
     method: 'POST',

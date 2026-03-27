@@ -19,6 +19,26 @@ class StockfishEngine {
   private buffer = '';
   private listeners: Array<(line: string) => boolean> = [];
   private ready = false;
+  private queue: Array<() => Promise<void>> = [];
+  private running = false;
+
+  private async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      this.queue.push(async () => {
+        try { resolve(await fn()); } catch (e) { reject(e); }
+      });
+      if (!this.running) this.drain();
+    });
+  }
+
+  private async drain(): Promise<void> {
+    this.running = true;
+    while (this.queue.length > 0) {
+      const task = this.queue.shift()!;
+      await task();
+    }
+    this.running = false;
+  }
 
   constructor(binaryPath: string, args: string[] = []) {
     this.proc = spawn(binaryPath, args, { stdio: ['pipe', 'pipe', 'ignore'] });
@@ -81,27 +101,79 @@ class StockfishEngine {
   }
 
   async getBestMove(fen: string, level: number): Promise<string> {
-    if (!this.ready) throw new Error('Engine not initialised');
-    const cfg = LEVEL_CONFIG[level] ?? LEVEL_CONFIG[5];
+    return this.enqueue(async () => {
+      if (!this.ready) throw new Error('Engine not initialised');
+      const cfg = LEVEL_CONFIG[level] ?? LEVEL_CONFIG[5];
 
-    this.send('ucinewgame');
-    this.send('isready');
-    await this.waitFor(l => l === 'readyok');
+      this.send('ucinewgame');
+      this.send('isready');
+      await this.waitFor(l => l === 'readyok');
 
-    if (cfg.elo !== undefined) {
-      this.send('setoption name UCI_LimitStrength value true');
-      this.send(`setoption name UCI_Elo value ${cfg.elo}`);
-    } else {
+      if (cfg.elo !== undefined) {
+        this.send('setoption name UCI_LimitStrength value true');
+        this.send(`setoption name UCI_Elo value ${cfg.elo}`);
+      } else {
+        this.send('setoption name UCI_LimitStrength value false');
+      }
+
+      this.send(`position fen ${fen}`);
+      this.send(`go movetime ${cfg.movetime}`);
+
+      const line = await this.waitFor(l => l.startsWith('bestmove'), cfg.movetime + 5000);
+      const move = line.split(' ')[1];
+      if (!move || move === '(none)') throw new Error('Stockfish returned no move');
+      return move;
+    });
+  }
+
+  async analyzePosition(fen: string, depth = 12): Promise<{ scoreCp: number; bestMove: string }> {
+    return this.enqueue(async () => {
+      if (!this.ready) throw new Error('Engine not initialised');
+
+      this.send('ucinewgame');
+      this.send('isready');
+      await this.waitFor(l => l === 'readyok');
       this.send('setoption name UCI_LimitStrength value false');
-    }
+      this.send(`position fen ${fen}`);
+      this.send(`go depth ${depth}`);
 
-    this.send(`position fen ${fen}`);
-    this.send(`go movetime ${cfg.movetime}`);
+      let lastScoreCp = 0;
 
-    const line = await this.waitFor(l => l.startsWith('bestmove'), cfg.movetime + 5000);
-    const move = line.split(' ')[1];
-    if (!move || move === '(none)') throw new Error('Stockfish returned no move');
-    return move; // UCI format e.g. "e7e5" or "e7e8q"
+      const line = await new Promise<string>((resolve, reject) => {
+        let settled = false;
+        let listener: ((line: string) => boolean) | null = null;
+
+        const cleanup = () => { this.listeners = this.listeners.filter(fn => fn !== listener); };
+        const timer = setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          this.send('stop');
+          reject(new Error('Stockfish analyze timeout'));
+        }, 15000);
+
+        listener = (line: string) => {
+          if (line.startsWith('info') && line.includes('score')) {
+            const cpMatch = line.match(/score cp (-?\d+)/);
+            const mateMatch = line.match(/score mate (-?\d+)/);
+            if (cpMatch) lastScoreCp = parseInt(cpMatch[1]);
+            else if (mateMatch) lastScoreCp = parseInt(mateMatch[1]) > 0 ? 10000 : -10000;
+            return false;
+          }
+          if (line.startsWith('bestmove')) {
+            if (!settled) { settled = true; clearTimeout(timer); resolve(line); }
+            return true;
+          }
+          return false;
+        };
+
+        this.listeners.push(listener);
+      });
+
+      const bestMove = line.split(' ')[1];
+      if (!bestMove || bestMove === '(none)') throw new Error('No move available');
+      return { scoreCp: lastScoreCp, bestMove };
+    });
   }
 
   destroy(): void {
@@ -130,6 +202,11 @@ export async function initEngine(): Promise<void> {
 export async function getBestMove(fen: string, level: number): Promise<string> {
   if (!engine) throw new Error('Engine not initialised — call initEngine() first');
   return engine.getBestMove(fen, level);
+}
+
+export async function analyzePosition(fen: string, depth = 12): Promise<{ scoreCp: number; bestMove: string }> {
+  if (!engine) throw new Error('Engine not initialised — call initEngine() first');
+  return engine.analyzePosition(fen, depth);
 }
 
 export function destroyEngine(): void {

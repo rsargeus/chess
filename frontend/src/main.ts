@@ -51,6 +51,14 @@ const capturedByWhiteEl = document.getElementById('captured-by-white')!;
 const capturedByBlackEl = document.getElementById('captured-by-black')!;
 const panelEl           = document.querySelector<HTMLElement>('.panel')!;
 
+// Coach panel elements
+const coachPanelEl  = document.getElementById('coach-panel')!;
+const coachEvalFill = document.getElementById('coach-eval-fill') as HTMLElement;
+const coachScoreEl  = document.getElementById('coach-score')!;
+const coachQualityEl = document.getElementById('coach-quality')!;
+const coachBestSanEl = document.getElementById('coach-best-san')!;
+const coachSpinnerEl = document.getElementById('coach-spinner')!;
+
 const wakeupBannerEl = document.getElementById('wakeup-banner')!;
 const profileCardEl      = document.getElementById('profile-card')!;
 const profileNameEl      = document.getElementById('profile-name')!;
@@ -245,6 +253,7 @@ function beginGame(state: api.GameState): void {
   stopLobbyMusic();
   hideProfileCard();
   panelEl.classList.remove('hidden');
+  showCoachPanel();
   muteBtn.classList.add('hidden');
   currentGameId = state.gameId;
   currentPlayerColor = state.playerColor ?? null;
@@ -274,6 +283,7 @@ async function loadGame(gameId: string): Promise<void> {
   stopLobbyMusic();
   hideProfileCard();
   panelEl.classList.remove('hidden');
+  showCoachPanel();
   muteBtn.classList.add('hidden');
   const state = await api.getGame(gameId);
   currentGameId = state.gameId;
@@ -369,6 +379,10 @@ async function handleMove(from: string, to: string): Promise<void> {
       playCheck();
     }
     refreshGameList();
+
+    // Coach analysis — fire after move is applied, don't block the UI
+    const prevFen = moveHistory[moveHistory.length - 2];
+    runCoachAnalysis(result.fen, prevFen).catch(() => {});
   } catch (err: any) {
     try {
       const state = await api.getGame(currentGameId!);
@@ -420,6 +434,67 @@ function updateStatus(status: string, turn: string, mode: api.GameMode, level: n
 function lastMoveOf(moves: api.MoveRecord[]): { from: string; to: string } | null {
   return moves.length > 0 ? { from: moves[moves.length - 1].from, to: moves[moves.length - 1].to } : null;
 }
+
+// ── Coach panel ──────────────────────────────────────────────
+const QUALITY_LABELS: Record<string, string> = {
+  excellent:  '⭐ Utmärkt drag',
+  good:       '✓ Bra drag',
+  inaccuracy: '⚠ Inexakthet',
+  mistake:    '✗ Misstag',
+  blunder:    '💥 Blunder',
+};
+
+function showCoachPanel(): void {
+  coachPanelEl.classList.remove('hidden');
+  coachScoreEl.textContent = '—';
+  coachQualityEl.textContent = '';
+  coachQualityEl.className = '';
+  coachBestSanEl.textContent = '—';
+  coachEvalFill.style.width = '50%';
+}
+
+function hideCoachPanel(): void {
+  coachPanelEl.classList.add('hidden');
+}
+
+async function runCoachAnalysis(fen: string, previousFen?: string): Promise<void> {
+  coachSpinnerEl.classList.remove('hidden');
+  coachQualityEl.textContent = '';
+  coachQualityEl.className = '';
+  coachBestSanEl.textContent = '—';
+  try {
+    const result = await api.analyzePosition(fen, previousFen);
+
+    // Eval bar: scoreCp from white's perspective. Clamp to ±600cp for display.
+    const clamped = Math.max(-600, Math.min(600, result.scoreCp));
+    const pct = Math.round(((clamped + 600) / 1200) * 100);
+    coachEvalFill.style.width = `${pct}%`;
+
+    // Score text
+    const abs = Math.abs(result.scoreCp);
+    if (abs >= 9900) {
+      const side = result.scoreCp > 0 ? 'Vit' : 'Svart';
+      coachScoreEl.textContent = `Mat (${side})`;
+    } else {
+      const sign = result.scoreCp > 0 ? '+' : result.scoreCp < 0 ? '−' : '';
+      coachScoreEl.textContent = `${sign}${(Math.abs(result.scoreCp) / 100).toFixed(1)}`;
+    }
+
+    // Move quality
+    if (result.moveQuality) {
+      coachQualityEl.textContent = QUALITY_LABELS[result.moveQuality] ?? '';
+      coachQualityEl.className = `quality-${result.moveQuality}`;
+    }
+
+    // Best move
+    coachBestSanEl.textContent = result.bestMoveSan ?? result.bestMove;
+  } catch {
+    coachScoreEl.textContent = '—';
+  } finally {
+    coachSpinnerEl.classList.add('hidden');
+  }
+}
+// ─────────────────────────────────────────────────────────────
 
 function setMoveHistory(moves: api.MoveRecord[]): void {
   moveHistory = [INITIAL_FEN, ...moves.map(m => m.fenAfter)];
@@ -540,6 +615,7 @@ function showOverlay(status: string): void {
 function returnToStart(): void {
   disconnectFromGame();
   panelEl.classList.add('hidden');
+  hideCoachPanel();
   showProfileCard(userNameEl.textContent ?? '');
   muteBtn.classList.remove('hidden');
   playLobbyMusic();

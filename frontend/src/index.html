@@ -1514,6 +1514,85 @@
       .login-bottom .privacy-note a { color: #7a4820; }
     }
 
+    /* Coach panel */
+    #coach-panel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(180deg, #1e0e04 0%, #160c04 100%);
+      border: 1px solid #3a1e08;
+      border-radius: 6px;
+      padding: 10px 14px;
+      font-family: 'Cinzel', serif;
+      position: relative;
+      min-height: 44px;
+    }
+    #coach-panel.hidden { display: none; }
+
+    .coach-eval-wrap {
+      display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+    }
+    .coach-eval-bar {
+      width: 80px; height: 8px;
+      background: #2a1508;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid #3a1e08;
+    }
+    #coach-eval-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f0f0f0, #ffffff);
+      border-radius: 4px 0 0 4px;
+      transition: width 0.4s ease;
+      width: 50%;
+    }
+    #coach-score {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
+      color: #c8a870; white-space: nowrap; min-width: 36px;
+    }
+
+    .coach-divider {
+      width: 1px; height: 20px; flex-shrink: 0;
+      background: linear-gradient(180deg, transparent, #5c3610, transparent);
+    }
+
+    #coach-quality {
+      font-size: 0.68rem; letter-spacing: 0.06em; font-weight: 700;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    #coach-quality.quality-excellent { color: #4aaa60; }
+    #coach-quality.quality-good      { color: #7ab840; }
+    #coach-quality.quality-inaccuracy { color: #e0c030; }
+    #coach-quality.quality-mistake   { color: #e08030; }
+    #coach-quality.quality-blunder   { color: #d04040; }
+
+    .coach-best-move {
+      display: flex; align-items: center; gap: 6px;
+      flex: 1; min-width: 0;
+    }
+    .coach-best-label {
+      font-size: 0.6rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #5c3610; white-space: nowrap; flex-shrink: 0;
+    }
+    #coach-best-san {
+      font-size: 0.78rem; color: #d4a84b; letter-spacing: 0.04em;
+      font-weight: 700;
+    }
+
+    .coach-spinner {
+      position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    }
+    .coach-spinner.hidden { display: none; }
+    .coach-spin-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #c8922a;
+      animation: coach-pulse 1s ease-in-out infinite;
+    }
+    @keyframes coach-pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50%       { opacity: 1;   transform: scale(1.2); }
+    }
+
     /* Captured pieces */
     .captured-pieces {
       background: #1c0e04;
@@ -1910,6 +1989,26 @@
         <button class="profile-edit-btn profile-edit-mobile" title="Edit Profile">Edit Profile</button>
       </div>
       </div><!-- /.board-column -->
+
+      <!-- Coach panel -->
+      <div id="coach-panel" class="hidden">
+        <div class="coach-eval-wrap">
+          <div class="coach-eval-bar">
+            <div id="coach-eval-fill"></div>
+          </div>
+          <span id="coach-score"></span>
+        </div>
+        <div class="coach-divider"></div>
+        <div id="coach-quality"></div>
+        <div class="coach-divider"></div>
+        <div class="coach-best-move">
+          <span class="coach-best-label">Bästa drag</span>
+          <span id="coach-best-san"></span>
+        </div>
+        <div id="coach-spinner" class="coach-spinner hidden">
+          <div class="coach-spin-dot"></div>
+        </div>
+      </div>
       <div class="panel hidden">
         <div id="status"></div>
         <div class="move-list-row">
