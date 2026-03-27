@@ -1432,6 +1432,86 @@
       #profile-card .profile-stat-label { font-size: 0.5rem; margin-top: 2px; }
       #profile-card .profile-edit-desktop { display: flex; }
       #profile-card .profile-edit-mobile { display: none; }
+
+      /* Login screen landscape: flexbox column — brand top, cards centered, sheet bottom */
+      .login-mobile { display: none !important; }
+      .login-desktop {
+        display: flex !important; flex-direction: column; height: 100%;
+      }
+
+      /* Brand: piece → title → tagline, stacked and centered */
+      .login-hero {
+        position: static; flex-shrink: 0;
+        flex-direction: column; align-items: center; justify-content: center;
+        text-align: center; padding: 14px 24px 0; gap: 0;
+      }
+      .login-logo { font-size: 2.4rem; line-height: 1; margin-bottom: 4px; }
+      .login-hero h1 { font-size: 1.3rem; margin-bottom: 3px; }
+      .login-hero p { font-size: 0.75rem; max-width: none; color: #c8a870; line-height: 1.4; }
+
+      /* Feature cards: auto height, centered with auto margins */
+      .login-features {
+        position: static; flex: 0 0 auto; margin: auto 0;
+        flex-direction: row; align-items: stretch; justify-content: center;
+        max-width: none; width: auto; padding: 0 24px; gap: 12px; display: flex;
+      }
+      .login-feature {
+        flex: 1 1 0; min-width: 0;
+        flex-direction: column; align-items: center; justify-content: flex-start;
+        text-align: center; padding: 12px 14px; gap: 6px;
+        background: #1c0e04; position: relative; overflow: hidden;
+      }
+      .login-feature::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, transparent, #c8922a, transparent);
+        opacity: 0; transition: opacity 0.2s;
+      }
+      .login-feature:hover::before { opacity: 1; }
+      .login-feature:hover { border-color: #c8922a; }
+      /* Icon: fixed 36px box, all content centered inside */
+      .login-feature-icon {
+        width: 36px; height: 36px; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; line-height: 1;
+      }
+      .login-feature-icon svg { height: 32px; width: auto; display: block; }
+      /* Text: clear hierarchy — title larger/gold, desc smaller/muted */
+      .login-feature-text { text-align: center; font-size: 0.7rem; color: #a08050; line-height: 1.4; }
+      .login-feature-text strong {
+        font-family: 'Cinzel', serif; font-size: 0.75rem; font-weight: 700;
+        letter-spacing: 0.04em; color: #e0c080;
+        display: block; margin-bottom: 3px;
+      }
+      .login-features-divider { display: none; }
+
+      /* Bottom sheet */
+      .login-bottom {
+        position: static; flex-shrink: 0;
+        flex-direction: column; align-items: center;
+        background: linear-gradient(180deg, #1e0e04 0%, #160c04 100%);
+        border-top: 1px solid #5c3610; border-left: none;
+        padding: 14px 24px 16px; gap: 6px;
+      }
+      .login-bottom::before {
+        top: 0; left: 25%; right: 25%; bottom: auto; width: auto; height: 1px;
+        background: linear-gradient(90deg, transparent, rgba(200,146,42,0.5), transparent);
+      }
+      .login-bottom-btns {
+        display: flex; gap: 12px; width: 100%; max-width: 500px; align-items: center;
+      }
+      /* "or" separator in button row */
+      .login-bottom-btns .login-divider {
+        flex: 0 0 auto; width: auto; max-width: none;
+        font-size: 0.65rem; color: #5c3610; padding: 0;
+      }
+      .login-bottom-btns .login-divider::before,
+      .login-bottom-btns .login-divider::after { display: none; }
+      .btn-login { max-width: none; padding: 13px 24px; flex: 1; font-size: 0.82rem; }
+      /* Privacy note: de-emphasised */
+      .login-bottom .privacy-note {
+        font-size: 0.58rem; letter-spacing: 0.06em; color: #5c3610;
+      }
+      .login-bottom .privacy-note a { color: #7a4820; }
     }
 
     /* Captured pieces */
@@ -1549,13 +1629,15 @@
         </div>
       </div>
       <div class="login-bottom">
+        <div class="login-bottom-btns">
+          <button id="login-google-btn" class="btn-login btn-google js-login-google">
+            <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
+            Continue with Google
+          </button>
+          <div class="login-divider">or</div>
+          <button id="login-email-btn" class="btn-login btn-email js-login-email">Continue with Email</button>
+        </div>
         <p class="privacy-note">By signing in you agree to our <a href="/privacy.html" target="_blank">Privacy Policy</a></p>
-        <button id="login-google-btn" class="btn-login btn-google js-login-google">
-          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58z"/></svg>
-          Continue with Google
-        </button>
-        <div class="login-divider">or</div>
-        <button id="login-email-btn" class="btn-login btn-email js-login-email">Continue with Email</button>
       </div>
     </div>
 
