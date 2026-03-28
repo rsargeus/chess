@@ -1336,12 +1336,10 @@ sidebarToggleBtn.addEventListener('click', () => {
 });
 sidebarOverlayEl.addEventListener('click', closeSidebar);
 loginGoogleBtns.forEach(btn => btn.addEventListener('click', async () => {
-  try { await loginWithGoogle(); } catch { return; }
-  await showApp();
+  await loginWithGoogle();
 }));
 loginEmailBtns.forEach(btn => btn.addEventListener('click', async () => {
-  try { await loginWithEmailPassword(); } catch { return; }
-  await showApp();
+  await loginWithEmailPassword();
 }));
 
 // Mobile onboarding: update dots on swipe

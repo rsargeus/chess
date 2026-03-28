@@ -73,14 +73,14 @@ export async function getUser(): Promise<User | undefined> {
 
 export async function loginWithGoogle(): Promise<void> {
   if (!_client) throw new Error('Auth not initialized');
-  await _client.loginWithPopup({
+  await _client.loginWithRedirect({
     authorizationParams: { connection: 'google-oauth2' },
   });
 }
 
 export async function loginWithEmailPassword(): Promise<void> {
   if (!_client) throw new Error('Auth not initialized');
-  await _client.loginWithPopup({
+  await _client.loginWithRedirect({
     authorizationParams: { connection: 'Username-Password-Authentication' },
   });
 }
