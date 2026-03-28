@@ -134,6 +134,11 @@ export async function pingBackend(): Promise<void> {
 
 export async function getMe(): Promise<{ premium: boolean }> {
   const res = await fetch(`${API_BASE}/me`, { headers: await authHeaders() });
+  if (res.status === 404) {
+    const { logout } = await import('./auth');
+    await logout();
+    throw new Error('User not found');
+  }
   if (!res.ok) throw new Error('Failed to fetch user info');
   return res.json();
 }
