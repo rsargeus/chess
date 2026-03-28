@@ -10,6 +10,7 @@ router.post('/', async (req: Request, res: Response) => {
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     line_items: [{ price: process.env.STRIPE_PRICE_ID!, quantity: 1 }],
+    allow_promotion_codes: true,
     metadata: { userId },
     success_url: `${process.env.FRONTEND_URL}?payment=success`,
     cancel_url: `${process.env.FRONTEND_URL}?payment=cancelled`,
