@@ -38,6 +38,15 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
 });
+
+// Stricter limit for /analyze — each request invokes Stockfish + Groq
+const analyzeLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many analysis requests, please slow down' },
+});
 // HTTP request logging (skip /health to avoid noise; redact auth tokens)
 app.use(pinoHttp({
   logger,
@@ -76,4 +85,4 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOpti
 app.use('/me', jwtCheck, meRouter);
 app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);
-app.use('/analyze', jwtCheck, analyzeRouter);
+app.use('/analyze', analyzeLimiter, jwtCheck, analyzeRouter);

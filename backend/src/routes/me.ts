@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { getUserRoles } from '../auth0Management';
 import { UserProfile } from '../models/UserProfile';
+import logger from '../logger';
 
 const meRouter = Router();
 
@@ -11,7 +12,7 @@ meRouter.get('/', async (req: Request, res: Response) => {
     res.json({ premium: roles.includes('premium') });
   } catch (err) {
     const isAuth0Error = err instanceof Error && err.message.startsWith('Auth0');
-    console.error(`GET /me error (${isAuth0Error ? 'Auth0' : 'unknown'}):`, err);
+    logger.error({ err, isAuth0Error }, 'GET /me failed');
     res.status(isAuth0Error ? 503 : 500).json({
       error: isAuth0Error ? 'Authentication service unavailable' : 'Failed to fetch user info',
     });
@@ -28,7 +29,7 @@ meRouter.get('/profile', async (req: Request, res: Response) => {
       color: profile.color,
     } : null);
   } catch (err) {
-    console.error('GET /me/profile error (DB):', err);
+    logger.error({ err }, 'GET /me/profile failed');
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 });
@@ -50,7 +51,7 @@ meRouter.put('/profile', async (req: Request, res: Response) => {
     );
     res.json({ displayName: profile.displayName, piece: profile.piece, color: profile.color });
   } catch (err) {
-    console.error('PUT /me/profile error (DB):', err);
+    logger.error({ err }, 'PUT /me/profile failed');
     res.status(500).json({ error: 'Failed to save profile' });
   }
 });

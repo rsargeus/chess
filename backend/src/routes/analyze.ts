@@ -30,7 +30,11 @@ function classifyMove(prevCp: number, currCp: number, movedColor: 'w' | 'b'): { 
 }
 
 router.post('/', async (req: Request, res: Response) => {
-  const { fen, previousFen, playerMoveSan, isOpponent } = req.body;
+  const { fen, previousFen, isOpponent } = req.body;
+  // Validate playerMoveSan against SAN pattern to prevent prompt injection
+  const SAN_RE = /^([KQRBN]?[a-h]?[1-8]?x?[a-h][1-8](=[QRBN])?|O-O(-O)?)[+#]?$/;
+  const rawSan = req.body.playerMoveSan;
+  const playerMoveSan = typeof rawSan === 'string' && SAN_RE.test(rawSan) ? rawSan : null;
 
   if (!fen || typeof fen !== 'string') {
     res.status(400).json({ error: 'fen is required' }); return;

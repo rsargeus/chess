@@ -3,6 +3,7 @@ import crypto from 'crypto';
 import { Game, GameMode, GameStatus } from './models/Game';
 import { Move } from './models/Move';
 import { getBestMove, parseUciMove } from './stockfish';
+import logger from './logger';
 
 function deriveStatus(chess: Chess): GameStatus {
   if (chess.isCheckmate()) return 'checkmate';
@@ -212,7 +213,7 @@ export async function applyMove(gameId: string, from: string, to: string, userId
       status = deriveStatus(chess);
       computerMove = { san: compResult.san, from: cf, to: ct };
     } catch (err) {
-      console.error('Stockfish error, falling back to random move:', err);
+      logger.warn({ err }, 'Stockfish error, falling back to random move');
       const fallback = randomMove(chess);
       if (fallback) {
         const compResult = chess.move(fallback);

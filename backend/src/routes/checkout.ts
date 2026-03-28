@@ -2,10 +2,10 @@ import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 
 const router = Router();
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 router.post('/', async (req: Request, res: Response) => {
   const userId = req.auth!.payload.sub as string;
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
