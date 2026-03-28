@@ -16,6 +16,7 @@ The app is a **Progressive Web App (PWA)** — installable on iOS and Android vi
 - **Language:** TypeScript
 - **Chess logic:** `chess.js` (move validation, check/checkmate detection, FEN)
 - **Chess engine:** Stockfish via `stockfish` npm package (ASM.js build, runs as a child process)
+- **LLM coaching:** Groq API (`groq-sdk`) — `llama-3.1-8b-instant` model for natural language coaching messages
 - **Database:** MongoDB Atlas via `mongoose`
 - **Auth:** `express-oauth2-jwt-bearer` (validates Auth0 JWTs), `jose` (JWT verification for WebSocket connections)
 - **Payments:** Stripe Checkout + webhooks
@@ -51,7 +52,8 @@ chess/
 │   │   ├── db.ts                     # Mongoose connection
 │   │   ├── wsServer.ts               # WebSocket server (rooms per gameId, JWT auth)
 │   │   ├── gameStore.ts              # DB-backed game state logic
-│   │   ├── stockfish.ts              # Stockfish child process wrapper
+│   │   ├── stockfish.ts              # Stockfish child process wrapper (MultiPV 3)
+│   │   ├── coaching.ts               # Groq LLM integration — prompt builder, SAN→natural language
 │   │   ├── auth0Management.ts        # Auth0 Management API (roles, premium, cache)
 │   │   ├── openapi.ts                # OpenAPI 3.0 spec (served at /api-docs)
 │   │   ├── middleware/
@@ -61,6 +63,7 @@ chess/
 │   │   │   └── Move.ts               # Move mongoose model/schema
 │   │   ├── routes/
 │   │   │   ├── game.ts               # /games routes
+│   │   │   ├── analyze.ts            # POST /analyze (Stockfish + Groq coaching)
 │   │   │   ├── me.ts                 # GET /me (authoritative premium check)
 │   │   │   ├── checkout.ts           # POST /checkout (Stripe)
 │   │   │   └── webhook.ts            # POST /webhooks/stripe
@@ -176,6 +179,70 @@ Two registered users play against each other remotely with no time limit between
 6. Receiving client fetches fresh game state via `GET /games/:gameId`
 7. Board auto-flips for the Black player (own pieces always at bottom)
 8. If a player is offline, they pick up the latest state when they next open the game
+
+---
+
+## Coach Panel
+
+After each move (in all game modes), the frontend calls `POST /analyze` to get Stockfish analysis and an LLM-generated coaching message. The coach panel is split into two sections: **Your move** (player's last move) and **Opponent** (opponent's last move).
+
+### Analysis pipeline (`POST /analyze`)
+
+1. Stockfish analyses both the current position and the previous position in parallel (MultiPV 3)
+2. Move quality is classified by centipawn drop:
+
+| Drop | Quality |
+|------|---------|
+| ≥ 200 cp | Blunder |
+| ≥ 100 cp | Mistake |
+| ≥ 50 cp | Inaccuracy |
+| < 0 cp (gain) | Excellent |
+| otherwise | Good |
+
+3. Best move and top 2 alternatives are computed from the previous position
+4. PV (principal variation, up to 8 half-moves) is converted from UCI to SAN with move numbers
+5. Groq API generates a 2–3 sentence natural language coaching message
+
+### Request
+
+```ts
+POST /analyze
+{
+  fen: string,           // current position (after the move)
+  previousFen?: string,  // position before the move (enables quality classification)
+  playerMoveSan?: string, // the move that was played (e.g. "Nf3")
+  isOpponent?: boolean   // true → message framed as "Your opponent played..."
+}
+```
+
+### Response
+
+```ts
+{
+  scoreCp: number,          // eval in centipawns, white's perspective
+  bestMove: string,         // UCI best move from previous position (e.g. "e2e4")
+  bestMoveSan: string | null,
+  bestMovePosition: { fen: string; from: string; to: string; san: string } | null,
+  moveQuality: 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | null,
+  evalDropCp: number | null,
+  mateIn: number | null,
+  alternatives: Array<{ moveSan: string; scoreCp: number; mateIn: number | null }>,
+  pv: string | null,        // formatted PV string, e.g. "5. Nf3 Nc6 6. Bc4"
+  pvPositions: Array<{ fen: string; from: string; to: string; san: string }>,
+  pvStartMoveNum: number,
+  pvStartWhite: boolean,
+  coachMessage: string      // LLM-generated coaching message (empty string if Groq unavailable)
+}
+```
+
+### Coach panel UI features
+
+- **Eval bar** — centered; expands right (gold) when white leads, left (gold) when black leads
+- **Toggle buttons** — Opp / You / Eval toggle their respective sections; state persisted in `localStorage`
+- **Alternatives chips** — top 2 moves the player could have played, with centipawn diff
+- **PV row** — best continuation with ▶ button to animate on board; nav arrows work through PV steps
+- **Best-was swap button (↺↻)** — undoes the player's last move and permanently plays Stockfish's recommendation
+- **Text-to-speech** — 🔊 button reads the coaching message aloud via Web Speech API (best available English voice, cached after first load)
 
 ---
 
@@ -325,6 +392,15 @@ Resign the game. Sets `status` to `"resigned"`.
 
 ---
 
+### `POST /analyze`
+Analyse a chess position with Stockfish and generate an LLM coaching message via Groq.
+
+**Request:** `{ fen, previousFen?, playerMoveSan?, isOpponent? }`
+
+**Response:** See Coach Panel section above for full response shape.
+
+---
+
 ### `POST /checkout`
 Create a Stripe Checkout session for Premium membership.
 
@@ -466,6 +542,7 @@ The app is installable on iOS and Android. Requirements are fulfilled:
   - `AUTH0_CLIENT_ID`, `AUTH0_MANAGEMENT_CLIENT_ID`, `AUTH0_MANAGEMENT_CLIENT_SECRET`
   - `AUTH0_PREMIUM_ROLE_ID`
   - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`
+  - `GROQ_API_KEY` — Groq API key for LLM coaching (free tier: 14 400 requests/day)
   - `FRONTEND_URL` → `https://chess-2h6.pages.dev`
   - `BACKEND_URL` → `https://chess-backend-in1l.onrender.com`
 
