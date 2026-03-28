@@ -160,14 +160,23 @@ export interface AnalysisResult {
   scoreCp: number;
   bestMove: string;
   bestMoveSan: string | null;
+  bestMovePosition: { fen: string; from: string; to: string; san: string } | null;
   moveQuality: 'excellent' | 'good' | 'inaccuracy' | 'mistake' | 'blunder' | null;
+  evalDropCp: number | null;
+  mateIn: number | null;
+  alternatives: Array<{ moveSan: string; scoreCp: number; mateIn: number | null }>;
+  pv: string | null;
+  pvPositions: Array<{ fen: string; from: string; to: string; san: string }>;
+  pvStartMoveNum: number;
+  pvStartWhite: boolean;
+  coachMessage: string;
 }
 
-export async function analyzePosition(fen: string, previousFen?: string): Promise<AnalysisResult> {
+export async function analyzePosition(fen: string, previousFen?: string, playerMoveSan?: string, isOpponent?: boolean): Promise<AnalysisResult> {
   const res = await fetch(`${API_BASE}/analyze`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...await authHeaders() },
-    body: JSON.stringify({ fen, previousFen }),
+    body: JSON.stringify({ fen, previousFen, playerMoveSan, isOpponent }),
   });
   if (!res.ok) throw new Error('Analysis failed');
   return res.json();

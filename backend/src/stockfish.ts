@@ -126,7 +126,11 @@ class StockfishEngine {
     });
   }
 
-  async analyzePosition(fen: string, depth = 12): Promise<{ scoreCp: number; bestMove: string }> {
+  async analyzePosition(fen: string, depth = 12): Promise<{
+    scoreCp: number; bestMove: string; pv: string;
+    mateIn: number | null;
+    alternatives: Array<{ scoreCp: number; mateIn: number | null; bestMove: string; pv: string }>;
+  }> {
     return this.enqueue(async () => {
       if (!this.ready) throw new Error('Engine not initialised');
 
@@ -134,10 +138,12 @@ class StockfishEngine {
       this.send('isready');
       await this.waitFor(l => l === 'readyok');
       this.send('setoption name UCI_LimitStrength value false');
+      this.send('setoption name MultiPV value 3');
       this.send(`position fen ${fen}`);
       this.send(`go depth ${depth}`);
 
-      let lastScoreCp = 0;
+      type PvData = { scoreCp: number; mateIn: number | null; pv: string };
+      const lastByPv: Record<number, PvData> = {};
 
       const line = await new Promise<string>((resolve, reject) => {
         let settled = false;
@@ -146,18 +152,23 @@ class StockfishEngine {
         const cleanup = () => { this.listeners = this.listeners.filter(fn => fn !== listener); };
         const timer = setTimeout(() => {
           if (settled) return;
-          settled = true;
-          cleanup();
-          this.send('stop');
+          settled = true; cleanup(); this.send('stop');
           reject(new Error('Stockfish analyze timeout'));
         }, 15000);
 
         listener = (line: string) => {
           if (line.startsWith('info') && line.includes('score')) {
-            const cpMatch = line.match(/score cp (-?\d+)/);
+            const pvIdxMatch = line.match(/\bmultipv (\d+)\b/);
+            const pvIdx = pvIdxMatch ? parseInt(pvIdxMatch[1]) : 1;
+            const cpMatch   = line.match(/score cp (-?\d+)/);
             const mateMatch = line.match(/score mate (-?\d+)/);
-            if (cpMatch) lastScoreCp = parseInt(cpMatch[1]);
-            else if (mateMatch) lastScoreCp = parseInt(mateMatch[1]) > 0 ? 10000 : -10000;
+            const pvMatch   = line.match(/ pv (.+)$/);
+            const prev = lastByPv[pvIdx] ?? { scoreCp: 0, mateIn: null, pv: '' };
+            let scoreCp = prev.scoreCp;
+            let mateIn: number | null = prev.mateIn;
+            if (cpMatch)   { scoreCp = parseInt(cpMatch[1]); mateIn = null; }
+            else if (mateMatch) { const m = parseInt(mateMatch[1]); scoreCp = m > 0 ? 10000 : -10000; mateIn = m; }
+            lastByPv[pvIdx] = { scoreCp, mateIn, pv: pvMatch ? pvMatch[1].trim() : prev.pv };
             return false;
           }
           if (line.startsWith('bestmove')) {
@@ -172,7 +183,13 @@ class StockfishEngine {
 
       const bestMove = line.split(' ')[1];
       if (!bestMove || bestMove === '(none)') throw new Error('No move available');
-      return { scoreCp: lastScoreCp, bestMove };
+
+      const main = lastByPv[1] ?? { scoreCp: 0, mateIn: null, pv: '' };
+      const alternatives = [2, 3]
+        .filter(i => lastByPv[i] && lastByPv[i].pv)
+        .map(i => ({ ...lastByPv[i], bestMove: lastByPv[i].pv.split(' ')[0] ?? '' }));
+
+      return { scoreCp: main.scoreCp, bestMove, pv: main.pv, mateIn: main.mateIn, alternatives };
     });
   }
 
@@ -204,7 +221,11 @@ export async function getBestMove(fen: string, level: number): Promise<string> {
   return engine.getBestMove(fen, level);
 }
 
-export async function analyzePosition(fen: string, depth = 12): Promise<{ scoreCp: number; bestMove: string }> {
+export async function analyzePosition(fen: string, depth = 12): Promise<{
+  scoreCp: number; bestMove: string; pv: string;
+  mateIn: number | null;
+  alternatives: Array<{ scoreCp: number; mateIn: number | null; bestMove: string; pv: string }>;
+}> {
   if (!engine) throw new Error('Engine not initialised — call initEngine() first');
   return engine.analyzePosition(fen, depth);
 }

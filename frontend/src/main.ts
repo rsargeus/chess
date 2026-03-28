@@ -64,7 +64,26 @@ const coachOppQualityEl = document.getElementById('coach-opp-quality')!;
 const coachOppSanEl = document.getElementById('coach-opp-san')!;
 const coachOppBestSanEl = document.getElementById('coach-opp-best-san')!;
 const undoBtnEl = document.getElementById('undo-btn') as HTMLButtonElement;
+const bestPlayBtnEl = document.getElementById('best-play-btn') as HTMLButtonElement;
 const evalToggleBtnEl = document.getElementById('eval-toggle-btn') as HTMLButtonElement;
+const oppToggleBtnEl = document.getElementById('opp-toggle-btn') as HTMLButtonElement;
+const youToggleBtnEl = document.getElementById('you-toggle-btn') as HTMLButtonElement;
+const coachOppWrapEl = document.getElementById('coach-opp-wrap')!;
+const coachYouWrapEl = document.getElementById('coach-you-wrap')!;
+const coachPvEl = document.getElementById('coach-pv')!;
+const coachOppPvEl = document.getElementById('coach-opp-pv')!;
+const coachMsgEl = document.getElementById('coach-msg')!;
+const coachMsgRowEl = document.getElementById('coach-msg-row')!;
+const coachOppMsgEl = document.getElementById('coach-opp-msg')!;
+const coachOppMsgRowEl = document.getElementById('coach-opp-msg-row')!;
+const coachSpeakBtn = document.getElementById('coach-speak-btn') as HTMLButtonElement;
+const coachOppSpeakBtn = document.getElementById('coach-opp-speak-btn') as HTMLButtonElement;
+const coachAltsEl = document.getElementById('coach-alts')!;
+const coachOppAltsEl = document.getElementById('coach-opp-alts')!;
+const coachPvTextEl = document.getElementById('coach-pv-text')!;
+const coachPvPlayBtn = document.getElementById('coach-pv-play') as HTMLButtonElement;
+const coachOppPvTextEl = document.getElementById('coach-opp-pv-text')!;
+const coachOppPvPlayBtn = document.getElementById('coach-opp-pv-play') as HTMLButtonElement;
 const coachBestSanEl = document.getElementById('coach-best-san')!;
 const coachSpinnerEl = document.getElementById('coach-spinner')!;
 
@@ -350,10 +369,10 @@ async function loadGame(gameId: string): Promise<void> {
     const playerLastMove = state.moves[playerLastMoveIdx];
     const analysisPrevFen = playerLastMoveIdx === 0 ? INITIAL_FEN : state.moves[playerLastMoveIdx - 1].fenAfter;
     runCoachAnalysis(playerLastMove.fenAfter, analysisPrevFen, playerLastMove.san)
-      .then(() => { if (playerLastMove.fenAfter !== state.fen) return runCoachAnalysis(state.fen); })
+      .then(() => { if (playerLastMove.fenAfter !== state.fen) return refreshEvalBar(state.fen); })
       .catch(() => {});
   } else {
-    runCoachAnalysis(state.fen).catch(() => {});
+    refreshEvalBar(state.fen).catch(() => {});
   }
   if (state.mode === 'vs_computer' && state.moves.length >= 2) {
     const lastMove = state.moves[state.moves.length - 1];
@@ -439,7 +458,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     // Analyse player's move (quality + best alternative), then update coach for final position
     // Player move quality + eval update after computer reply — run in parallel
     const playerAnalysis = runCoachAnalysis(analysisFen, analysisPrevFen, result.move.san)
-      .then(() => { if (hasComputerReply) return runCoachAnalysis(result.fen); });
+      .then(() => { if (hasComputerReply) return refreshEvalBar(result.fen); });
     const oppAnalysis = hasComputerReply && result.computerMove
       ? runOpponentAnalysis(result.fen, result.move.fenAfter, result.computerMove.san)
       : Promise.resolve();
@@ -516,6 +535,259 @@ evalToggleBtnEl.addEventListener('click', () => {
   applyEvalBarVisibility();
 });
 
+let oppCoachVisible = localStorage.getItem('oppCoachVisible') !== 'false';
+function applyOppCoachVisibility(): void {
+  coachOppWrapEl.classList.toggle('hidden', !oppCoachVisible);
+  oppToggleBtnEl.classList.toggle('active', oppCoachVisible);
+}
+oppToggleBtnEl.addEventListener('click', () => {
+  oppCoachVisible = !oppCoachVisible;
+  localStorage.setItem('oppCoachVisible', String(oppCoachVisible));
+  applyOppCoachVisibility();
+});
+
+let youCoachVisible = localStorage.getItem('youCoachVisible') !== 'false';
+function applyYouCoachVisibility(): void {
+  coachYouWrapEl.classList.toggle('hidden', !youCoachVisible);
+  youToggleBtnEl.classList.toggle('active', youCoachVisible);
+}
+youToggleBtnEl.addEventListener('click', () => {
+  youCoachVisible = !youCoachVisible;
+  localStorage.setItem('youCoachVisible', String(youCoachVisible));
+  applyYouCoachVisibility();
+});
+
+let cachedVoice: SpeechSynthesisVoice | null = null;
+
+function pickVoice(): SpeechSynthesisVoice | null {
+  if (cachedVoice) return cachedVoice;
+  const voices = speechSynthesis.getVoices();
+  if (!voices.length) return null;
+  const enVoices = voices.filter(v => v.lang.startsWith('en'));
+  const priority = [
+    (v: SpeechSynthesisVoice) => /Ava|Allison|Samantha/.test(v.name) && /enhanced|premium/i.test(v.name),
+    (v: SpeechSynthesisVoice) => /enhanced|premium/i.test(v.name),
+    (v: SpeechSynthesisVoice) => v.name.startsWith('Google') && v.lang === 'en-US',
+    (v: SpeechSynthesisVoice) => v.lang === 'en-US',
+    (v: SpeechSynthesisVoice) => v.lang.startsWith('en'),
+  ];
+  for (const test of priority) {
+    const match = enVoices.find(test);
+    if (match) { cachedVoice = match; return match; }
+  }
+  return null;
+}
+
+// Pre-load voices as soon as they're available
+speechSynthesis.addEventListener('voiceschanged', () => { cachedVoice = null; pickVoice(); });
+
+function speakText(text: string, btn: HTMLButtonElement): void {
+  speechSynthesis.cancel();
+  if (btn.classList.contains('speaking')) {
+    btn.classList.remove('speaking');
+    return;
+  }
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'en-US';
+  utt.rate = 0.95;
+  const voice = pickVoice();
+  if (voice) utt.voice = voice;
+  utt.onend = () => btn.classList.remove('speaking');
+  utt.onerror = () => btn.classList.remove('speaking');
+  btn.classList.add('speaking');
+  speechSynthesis.speak(utt);
+}
+
+coachSpeakBtn.addEventListener('click', () => speakText(coachMsgEl.textContent ?? '', coachSpeakBtn));
+coachOppSpeakBtn.addEventListener('click', () => speakText(coachOppMsgEl.textContent ?? '', coachOppSpeakBtn));
+
+function generateCoachMessage(
+  quality: string,
+  evalDropCp: number | null,
+  bestSan: string | null,
+  mateIn: number | null,
+): string {
+  if (mateIn !== null) {
+    if (mateIn > 0) return `Checkmate in ${mateIn} move${mateIn === 1 ? '' : 's'}!`;
+    if (mateIn < 0) return `Opponent has mate in ${Math.abs(mateIn)}.`;
+  }
+  const pawns = evalDropCp !== null ? (Math.abs(evalDropCp) / 100).toFixed(1) : null;
+  const best = bestSan ? ` ${bestSan} was stronger.` : '';
+  const bestWas = bestSan ? ` Best was ${bestSan}.` : '';
+  switch (quality) {
+    case 'excellent': return pawns && evalDropCp! < -50
+      ? `Excellent! You gained ${pawns} pawns with that move.`
+      : 'Excellent move!';
+    case 'good':       return 'Good move. You are on the right track.';
+    case 'inaccuracy': return `Slight inaccuracy${pawns ? ` (−${pawns} pawns)` : ''}.${best}`;
+    case 'mistake':    return `Mistake — you lost ${pawns ?? '?'} pawns.${bestWas}`;
+    case 'blunder':    return `Blunder! You dropped ${pawns ?? '?'} pawns.${bestWas}`;
+    default:           return '';
+  }
+}
+
+function renderAlternatives(
+  el: HTMLElement,
+  alts: Array<{ moveSan: string; scoreCp: number; mateIn: number | null }>,
+  refScoreCp: number,
+): void {
+  if (!alts.length) { el.classList.add('hidden'); return; }
+  el.innerHTML = alts.map(a => {
+    const diff = a.scoreCp - refScoreCp;
+    const sign = diff >= 0 ? '+' : '−';
+    const val = (Math.abs(diff) / 100).toFixed(1);
+    const evalStr = a.mateIn !== null ? `M${Math.abs(a.mateIn)}` : `${sign}${val}`;
+    const neg = diff < 0;
+    return `<span class="coach-alt-chip">${a.moveSan} <span class="alt-eval${neg ? ' neg' : ''}">${evalStr}</span></span>`;
+  }).join('');
+  el.classList.remove('hidden');
+}
+
+// ── PV mode state ────────────────────────────────────────────
+let pvMode = false;
+let pvModePositions: Array<{ fen: string; from: string; to: string; san: string }> = [];
+let pvModeStartMoveNum = 1;
+let pvModeStartWhite = true;
+let pvModeIndex = -1;
+let pvModeRestoreFen = '';
+let pvModeRestoreLastMove: { from: string; to: string } | null = null;
+let pvModeBtn: HTMLButtonElement | null = null;
+let pvModeAutoTimer: ReturnType<typeof setTimeout> | null = null;
+let pvTempRows: HTMLElement[] = [];
+
+function clearPvTempRows(): void {
+  pvTempRows.forEach(r => r.remove());
+  pvTempRows = [];
+}
+
+function addPvMoveToList(san: string, moveNum: number, isWhite: boolean): void {
+  if (isWhite || pvTempRows.length === 0) {
+    const row = document.createElement('div');
+    row.className = 'move-row pv-temp';
+    const num = document.createElement('span');
+    num.className = 'move-num';
+    num.textContent = isWhite ? `${moveNum}.` : `${moveNum}…`;
+    const cell = document.createElement('span');
+    cell.className = 'move-san';
+    cell.textContent = san;
+    row.append(num, cell);
+    if (!isWhite) {
+      // black starts — add empty white placeholder so black lands in right column
+      const empty = document.createElement('span');
+      empty.className = 'move-san';
+      row.insertBefore(empty, cell);
+    }
+    moveListEl.appendChild(row);
+    pvTempRows.push(row);
+  } else {
+    // Add black move to the last row that only has white's move
+    const lastRow = pvTempRows[pvTempRows.length - 1];
+    const existing = lastRow.querySelectorAll('.move-san');
+    if (existing.length === 1) {
+      const cell = document.createElement('span');
+      cell.className = 'move-san';
+      cell.textContent = san;
+      lastRow.appendChild(cell);
+    }
+  }
+  moveListEl.scrollTop = moveListEl.scrollHeight;
+}
+
+function renderPvHistory(upToIndex: number): void {
+  clearPvTempRows();
+  let moveNum = pvModeStartMoveNum;
+  let isWhite = pvModeStartWhite;
+  for (let i = 0; i <= upToIndex && i < pvModePositions.length; i++) {
+    addPvMoveToList(pvModePositions[i].san, moveNum, isWhite);
+    if (!isWhite) moveNum++;
+    isWhite = !isWhite;
+  }
+}
+
+function navigatePv(index: number): void {
+  if (!pvMode || pvModePositions.length === 0) return;
+  if (pvModeAutoTimer !== null) { clearTimeout(pvModeAutoTimer); pvModeAutoTimer = null; }
+  const clamped = Math.max(0, Math.min(pvModePositions.length - 1, index));
+  pvModeIndex = clamped;
+  const pos = pvModePositions[clamped];
+  board!.setFen(pos.fen, false, isFlipped(), { from: pos.from, to: pos.to });
+  refreshEvalBar(pos.fen).catch(() => {});
+  renderPvHistory(clamped);
+  updateNavButtons();
+}
+
+function exitPvMode(): void {
+  if (!pvMode) return;
+  if (pvModeAutoTimer !== null) { clearTimeout(pvModeAutoTimer); pvModeAutoTimer = null; }
+  pvMode = false;
+  board!.setFen(pvModeRestoreFen, viewIndex === moveHistory.length - 1 && gameIsActive, isFlipped(), pvModeRestoreLastMove);
+  refreshEvalBar(pvModeRestoreFen).catch(() => {});
+  clearPvTempRows();
+  if (pvModeBtn) {
+    pvModeBtn.classList.remove('playing');
+    pvModeBtn.textContent = '▶';
+    const capturedPositions = pvModePositions;
+    const capturedStartMoveNum = pvModeStartMoveNum;
+    const capturedStartWhite = pvModeStartWhite;
+    const capturedBtn = pvModeBtn;
+    pvModeBtn.onclick = () => enterPvMode(capturedPositions, capturedStartMoveNum, capturedStartWhite, capturedBtn);
+  }
+  updateNavButtons();
+}
+
+function enterPvMode(
+  positions: Array<{ fen: string; from: string; to: string; san: string }>,
+  startMoveNum: number,
+  startWhite: boolean,
+  btn: HTMLButtonElement,
+): void {
+  if (pvMode && pvModeBtn === btn) { exitPvMode(); return; }
+  if (pvMode) exitPvMode();
+  if (!board || positions.length === 0) return;
+
+  pvMode = true;
+  pvModePositions = positions;
+  pvModeStartMoveNum = startMoveNum;
+  pvModeStartWhite = startWhite;
+  pvModeIndex = -1;
+  pvModeRestoreFen = moveHistory[viewIndex];
+  pvModeRestoreLastMove = viewIndex > 0
+    ? { from: moveRecords[viewIndex - 1].from, to: moveRecords[viewIndex - 1].to }
+    : null;
+  pvModeBtn = btn;
+  btn.classList.add('playing');
+  btn.textContent = '■';
+  btn.onclick = () => exitPvMode();
+
+  let i = 0;
+  let moveNum = startMoveNum;
+  let isWhite = startWhite;
+
+  const step = () => {
+    if (!pvMode || pvModeBtn !== btn) return;
+    if (i >= positions.length) { pvModeAutoTimer = null; return; }
+    pvModeIndex = i;
+    const pos = positions[i++];
+    board!.setFen(pos.fen, false, isFlipped(), { from: pos.from, to: pos.to });
+    refreshEvalBar(pos.fen).catch(() => {});
+    addPvMoveToList(pos.san, moveNum, isWhite);
+    if (!isWhite) moveNum++;
+    isWhite = !isWhite;
+    updateNavButtons();
+    pvModeAutoTimer = setTimeout(step, 800);
+  };
+  step();
+}
+
+function bindPvPlayBtn(
+  btn: HTMLButtonElement,
+  getPositions: () => Array<{ fen: string; from: string; to: string; san: string }>,
+  getStartMoveNum: () => number,
+  getStartWhite: () => boolean,
+): void {
+  btn.onclick = () => enterPvMode(getPositions(), getStartMoveNum(), getStartWhite(), btn);
+}
+
 const QUALITY_LABELS: Record<string, string> = {
   excellent:  '⭐ Excellent',
   good:       '✓ Good move',
@@ -526,13 +798,17 @@ const QUALITY_LABELS: Record<string, string> = {
 
 function showCoachPanel(): void {
   applyEvalBarVisibility();
+  applyOppCoachVisibility();
+  applyYouCoachVisibility();
   coachPanelEl.classList.remove('hidden');
   coachScoreEl.textContent = '—';
   coachQualityEl.textContent = '—';
   coachQualityEl.className = '';
   coachPlayerSanEl.textContent = '—';
   coachBestSanEl.textContent = '—';
-  coachEvalFill.style.width = '50%';
+  bestPlayBtnEl.classList.add('hidden');
+  coachEvalFill.style.left = '50%';
+  coachEvalFill.style.width = '0%';
   coachOppPanelEl.classList.remove('hidden');
   coachOppQualityEl.textContent = '';
   coachOppQualityEl.className = '';
@@ -550,8 +826,18 @@ function hideCoachPanel(): void {
 
 function applyEvalToBar(scoreCp: number): void {
   const clamped = Math.max(-600, Math.min(600, scoreCp));
-  const pct = Math.round(((clamped + 600) / 1200) * 100);
-  coachEvalFill.style.width = `${pct}%`;
+  const halfPct = Math.round((Math.abs(clamped) / 1200) * 100); // 0–50%
+  if (clamped >= 0) {
+    coachEvalFill.style.left = '50%';
+    coachEvalFill.style.width = `${halfPct}%`;
+    coachEvalFill.style.background = 'linear-gradient(90deg, #a07820, #d4a830)';
+    coachEvalFill.style.borderRadius = '0 4px 4px 0';
+  } else {
+    coachEvalFill.style.left = `${50 - halfPct}%`;
+    coachEvalFill.style.width = `${halfPct}%`;
+    coachEvalFill.style.background = 'linear-gradient(90deg, #a07820, #d4a830)';
+    coachEvalFill.style.borderRadius = '4px 0 0 4px';
+  }
   const abs = Math.abs(scoreCp);
   if (abs >= 9900) {
     coachScoreEl.textContent = scoreCp > 0 ? 'Mate (White)' : 'Mate (Black)';
@@ -574,7 +860,7 @@ async function runCoachAnalysis(fen: string, previousFen?: string, playerMoveSan
   if (playerMoveSan !== undefined) coachPlayerSanEl.textContent = playerMoveSan;
   coachBestSanEl.textContent = '—';
   try {
-    const result = await api.analyzePosition(fen, previousFen);
+    const result = await api.analyzePosition(fen, previousFen, playerMoveSan);
     applyEvalToBar(result.scoreCp);
 
     // Move quality
@@ -585,6 +871,46 @@ async function runCoachAnalysis(fen: string, previousFen?: string, playerMoveSan
 
     // Best move
     coachBestSanEl.textContent = result.bestMoveSan ?? result.bestMove;
+    if (result.bestMovePosition && previousFen !== undefined) {
+      const bmp = result.bestMovePosition;
+      const prevParts = previousFen.split(' ');
+      const prevMoveNum = parseInt(prevParts[5]) || 1;
+      const prevIsWhite = prevParts[1] === 'w';
+      bestPlayBtnEl.classList.remove('hidden');
+      bestPlayBtnEl.onclick = async () => {
+        if (!currentGameId) return;
+        bestPlayBtnEl.disabled = true;
+        try {
+          await api.undoMove(currentGameId);
+          await handleMove(bmp.from, bmp.to);
+        } catch (err: any) {
+          statusEl.textContent = err.message;
+        } finally {
+          bestPlayBtnEl.disabled = false;
+        }
+      };
+    } else {
+      bestPlayBtnEl.classList.add('hidden');
+    }
+
+    // LLM coaching message
+    coachMsgEl.textContent = result.coachMessage;
+    coachMsgRowEl.classList.toggle('hidden', !result.coachMessage);
+    coachSpeakBtn.classList.remove('speaking');
+
+    // Alternatives
+    renderAlternatives(coachAltsEl, result.alternatives, result.scoreCp);
+
+    // PV
+    if (result.pv) {
+      coachPvTextEl.textContent = result.pv;
+      coachPvEl.classList.remove('hidden');
+      const positions = result.pvPositions ?? [];
+      const startMoveNum = result.pvStartMoveNum ?? 1;
+      const startWhite = result.pvStartWhite ?? true;
+      bindPvPlayBtn(coachPvPlayBtn, () => positions, () => startMoveNum, () => startWhite);
+      coachPvPlayBtn.style.display = positions.length ? '' : 'none';
+    }
   } catch {
     coachScoreEl.textContent = '—';
   } finally {
@@ -597,12 +923,31 @@ async function runOpponentAnalysis(fen: string, previousFen: string, oppMoveSan:
   coachOppSanEl.textContent = oppMoveSan;
   coachOppBestSanEl.textContent = '—';
   try {
-    const result = await api.analyzePosition(fen, previousFen);
+    const result = await api.analyzePosition(fen, previousFen, oppMoveSan, true);
     if (result.moveQuality) {
       coachOppQualityEl.textContent = QUALITY_LABELS[result.moveQuality] ?? '';
       coachOppQualityEl.className = `quality-${result.moveQuality}`;
     }
     coachOppBestSanEl.textContent = result.bestMoveSan ?? result.bestMove;
+
+    // LLM coaching message
+    coachOppMsgEl.textContent = result.coachMessage;
+    coachOppMsgRowEl.classList.toggle('hidden', !result.coachMessage);
+    coachOppSpeakBtn.classList.remove('speaking');
+
+    // Alternatives
+    renderAlternatives(coachOppAltsEl, result.alternatives, result.scoreCp);
+
+    // PV
+    if (result.pv) {
+      coachOppPvTextEl.textContent = result.pv;
+      coachOppPvEl.classList.remove('hidden');
+      const positions = result.pvPositions ?? [];
+      const startMoveNum = result.pvStartMoveNum ?? 1;
+      const startWhite = result.pvStartWhite ?? true;
+      bindPvPlayBtn(coachOppPvPlayBtn, () => positions, () => startMoveNum, () => startWhite);
+      coachOppPvPlayBtn.style.display = positions.length ? '' : 'none';
+    }
   } catch { /* keep —  */ }
 }
 
@@ -616,8 +961,13 @@ function setMoveHistory(moves: api.MoveRecord[]): void {
 }
 
 function updateNavButtons(): void {
-  navBackBtn.disabled = viewIndex <= 0;
-  navFwdBtn.disabled = viewIndex >= moveHistory.length - 1;
+  if (pvMode) {
+    navBackBtn.disabled = pvModeIndex <= 0;
+    navFwdBtn.disabled = pvModeIndex >= pvModePositions.length - 1;
+  } else {
+    navBackBtn.disabled = viewIndex <= 0;
+    navFwdBtn.disabled = viewIndex >= moveHistory.length - 1;
+  }
 }
 
 function navigateTo(index: number): void {
@@ -957,8 +1307,8 @@ lobbyBtn.addEventListener('click', returnToStart);
 
 navBackBtn.classList.add('hidden');
 navFwdBtn.classList.add('hidden');
-navBackBtn.addEventListener('click', () => navigateTo(viewIndex - 1));
-navFwdBtn.addEventListener('click', () => navigateTo(viewIndex + 1));
+navBackBtn.addEventListener('click', () => pvMode ? navigatePv(pvModeIndex - 1) : navigateTo(viewIndex - 1));
+navFwdBtn.addEventListener('click', () => pvMode ? navigatePv(pvModeIndex + 1) : navigateTo(viewIndex + 1));
 
 // Mobile sidebar toggle
 const sidebarEl = document.querySelector('.sidebar')!;

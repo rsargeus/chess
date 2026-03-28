@@ -438,6 +438,9 @@
     .move-san { color: #c4a878; cursor: pointer; }
     .move-san:hover { color: #d4a84b; }
     .move-san.move-current { color: #d4a84b; font-weight: 700; }
+    .move-row.pv-temp .move-num { color: #5c3610; font-style: italic; }
+    .move-row.pv-temp .move-san { color: #7a5030; font-style: italic; cursor: default; }
+    .move-row.pv-temp .move-san:hover { color: #7a5030; }
 
     /* Game over overlay */
     .overlay {
@@ -1523,7 +1526,7 @@
       width: 100%;
     }
     .coach-row #coach-panel { flex: 1; }
-    .coach-row #undo-btn { flex-shrink: 0; align-self: stretch; }
+    .coach-row #undo-btn { flex-shrink: 0; align-self: stretch; font-size: 1.2rem; }
 
     /* Coach panel */
     #coach-panel {
@@ -1569,6 +1572,8 @@
       padding: 8px 14px;
     }
     #coach-eval-wrap.hidden { display: none; }
+    #coach-opp-wrap.hidden { display: none; }
+    #coach-you-wrap.hidden { display: none; }
     .status-row {
       display: flex;
       align-items: center;
@@ -1596,15 +1601,21 @@
       flex: 1; height: 8px;
       background: #2a1508;
       border-radius: 4px;
-      overflow: hidden;
       border: 1px solid #3a1e08;
+      position: relative;
+    }
+    .coach-eval-bar::after {
+      content: '';
+      position: absolute;
+      left: 50%; top: 0;
+      width: 1px; height: 100%;
+      background: #5a3010;
+      transform: translateX(-50%);
     }
     #coach-eval-fill {
+      position: absolute;
       height: 100%;
-      background: linear-gradient(90deg, #f0f0f0, #ffffff);
-      border-radius: 4px 0 0 4px;
-      transition: width 0.4s ease;
-      width: 50%;
+      transition: left 0.4s ease, width 0.4s ease;
     }
     #coach-score {
       font-size: 0.72rem; font-weight: 600; letter-spacing: 0.04em;
@@ -1630,6 +1641,72 @@
       display: flex; align-items: center; gap: 6px;
       flex: 1; min-width: 0;
     }
+    .coach-msg-row {
+      display: flex; align-items: flex-start; gap: 4px;
+    }
+    .coach-msg-row.hidden { display: none; }
+    .coach-msg {
+      font-family: 'Cinzel', serif;
+      font-size: 0.68rem;
+      color: #c4a878;
+      padding: 4px 6px;
+      line-height: 1.5;
+      flex: 1;
+    }
+    .coach-speak-btn {
+      background: none; border: none; cursor: pointer;
+      color: #7a6040; font-size: 0.85rem; padding: 4px 2px;
+      flex-shrink: 0; line-height: 1;
+      transition: color 0.15s;
+    }
+    .coach-speak-btn:hover { color: #c4a878; }
+    .coach-speak-btn.speaking { color: #e0a030; }
+    .coach-alts {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 2px 6px;
+    }
+    .coach-alts.hidden { display: none; }
+    .coach-alt-chip {
+      font-family: 'Cinzel', serif;
+      font-size: 0.6rem;
+      padding: 2px 7px;
+      border-radius: 3px;
+      border: 1px solid #3a1e08;
+      background: rgba(92,54,16,0.2);
+      color: #a07848;
+      white-space: nowrap;
+    }
+    .coach-alt-chip .alt-eval { color: #6a9a50; }
+    .coach-alt-chip .alt-eval.neg { color: #c07040; }
+    .coach-pv {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 0.65rem;
+      color: #6a4020;
+      word-break: break-all;
+      padding: 3px 6px;
+    }
+    .coach-pv.hidden { display: none; }
+    .pv-text { flex: 1; }
+    .pv-play-btn {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid #5c3610;
+      border-radius: 3px;
+      color: #b07840;
+      font-size: 0.6rem;
+      padding: 1px 5px;
+      cursor: pointer;
+      font-family: 'Cinzel', serif;
+      letter-spacing: 0.04em;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .pv-play-btn:hover { border-color: #d4a84b; color: #d4a84b; }
+    .pv-play-btn.playing { border-color: #d4a84b; color: #d4a84b; }
     .coach-best-label {
       font-family: 'Cinzel', serif;
       font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
@@ -2055,6 +2132,8 @@
       <div class="panel hidden">
         <div class="status-row">
           <div id="status"></div>
+          <button id="opp-toggle-btn" class="eval-toggle-btn" title="Toggle opponent coach">Opp</button>
+          <button id="you-toggle-btn" class="eval-toggle-btn" title="Toggle your coach">You</button>
           <button id="eval-toggle-btn" class="eval-toggle-btn" title="Toggle eval bar">Eval</button>
         </div>
         <!-- Eval bar (above coach) -->
@@ -2064,40 +2143,62 @@
           </div>
           <span id="coach-score"></span>
         </div>
-        <!-- Opponent analysis row -->
-        <div id="coach-opp-panel" class="hidden">
-          <div id="coach-opp-quality"></div>
-          <div class="coach-divider"></div>
-          <div class="coach-best-move">
-            <span class="coach-best-label">Opponent</span>
-            <span id="coach-opp-san"></span>
+        <!-- Opponent analysis (togglable) -->
+        <div id="coach-opp-wrap">
+          <div id="coach-opp-panel" class="hidden">
+            <div id="coach-opp-quality"></div>
+            <div class="coach-divider"></div>
+            <div class="coach-best-move">
+              <span class="coach-best-label">Opponent</span>
+              <span id="coach-opp-san"></span>
+            </div>
+            <div class="coach-divider"></div>
+            <div class="coach-best-move">
+              <span class="coach-best-label">Best was</span>
+              <span id="coach-opp-best-san"></span>
+            </div>
           </div>
-          <div class="coach-divider"></div>
-          <div class="coach-best-move">
-            <span class="coach-best-label">Best move</span>
-            <span id="coach-opp-best-san"></span>
+          <div id="coach-opp-msg-row" class="coach-msg-row hidden">
+            <div id="coach-opp-msg" class="coach-msg"></div>
+            <button id="coach-opp-speak-btn" class="coach-speak-btn" title="Read aloud">🔊</button>
           </div>
+          <div id="coach-opp-alts" class="coach-alts hidden"></div>
+          <div id="coach-opp-pv" class="coach-pv hidden"><span id="coach-opp-pv-text" class="pv-text"></span><button id="coach-opp-pv-play" class="pv-play-btn" title="Show on board">▶</button></div>
         </div>
         <!-- Player coach panel + undo button -->
-        <div class="coach-row">
-        <div id="coach-panel" class="hidden">
-          <div id="coach-quality"></div>
-          <div class="coach-divider"></div>
-          <div class="coach-best-move">
-            <span class="coach-best-label">Your move</span>
-            <span id="coach-player-san"></span>
+        <div id="coach-you-wrap">
+          <div class="coach-row">
+            <div id="coach-panel" class="hidden">
+              <div id="coach-quality"></div>
+              <div class="coach-divider"></div>
+              <div class="coach-best-move">
+                <span class="coach-best-label">Your move</span>
+                <span id="coach-player-san"></span>
+              </div>
+              <div class="coach-divider"></div>
+              <div class="coach-best-move">
+                <span class="coach-best-label">Best was</span>
+                <span id="coach-best-san"></span>
+              </div>
+              <div id="coach-spinner" class="coach-spinner hidden">
+                <div class="coach-spin-dot"></div>
+              </div>
+            </div>
+            <button id="best-play-btn" class="btn btn-secondary hidden" title="Show best move on board">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 4a8 8 0 0 1 6.928 4H16.5a1 1 0 0 0 0 2h5a1 1 0 0 0 1-1V4a1 1 0 0 0-2 0v2.101A9.98 9.98 0 0 0 12 2C6.477 2 2 6.477 2 12a1 1 0 0 0 2 0 8 8 0 0 1 8-8Z"/>
+                <path d="M12 20a8 8 0 0 1-6.928-4H7.5a1 1 0 0 0 0-2h-5a1 1 0 0 0-1 1v5a1 1 0 0 0 2 0v-2.101A9.98 9.98 0 0 0 12 22c5.523 0 10-4.477 10-10a1 1 0 0 0-2 0 8 8 0 0 1-8 8Z"/>
+              </svg>
+            </button>
+            <button id="undo-btn" class="btn btn-secondary hidden" disabled title="Undo your last move">↩</button>
           </div>
-          <div class="coach-divider"></div>
-          <div class="coach-best-move">
-            <span class="coach-best-label">Best move</span>
-            <span id="coach-best-san"></span>
+          <div id="coach-msg-row" class="coach-msg-row hidden">
+            <div id="coach-msg" class="coach-msg"></div>
+            <button id="coach-speak-btn" class="coach-speak-btn" title="Read aloud">🔊</button>
           </div>
-          <div id="coach-spinner" class="coach-spinner hidden">
-            <div class="coach-spin-dot"></div>
-          </div>
+          <div id="coach-alts" class="coach-alts hidden"></div>
+          <div id="coach-pv" class="coach-pv hidden"><span id="coach-pv-text" class="pv-text"></span><button id="coach-pv-play" class="pv-play-btn" title="Show on board">▶</button></div>
         </div>
-        <button id="undo-btn" class="btn btn-secondary hidden" disabled title="Undo your last move">↩</button>
-        </div><!-- /.coach-row -->
         <div class="move-list-row">
           <div id="move-list" class="hidden"></div>
           <button id="resign-btn" class="btn btn-secondary hidden">Resign</button>
