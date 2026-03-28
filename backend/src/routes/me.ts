@@ -21,7 +21,11 @@ meRouter.get('/', async (req: Request, res: Response) => {
       premiumExpiresAt: premiumActive ? profile!.premiumExpiresAt : null,
     });
   } catch (err) {
-    const isAuth0Error = err instanceof Error && err.message.startsWith('Auth0');
+    const msg = err instanceof Error ? err.message : '';
+    if (msg.includes('inexistent_user') || msg.includes('The user does not exist')) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    const isAuth0Error = msg.startsWith('Auth0');
     logger.error({ err, isAuth0Error }, 'GET /me failed');
     res.status(isAuth0Error ? 503 : 500).json({
       error: isAuth0Error ? 'Authentication service unavailable' : 'Failed to fetch user info',
