@@ -15,7 +15,11 @@ import logger from './logger';
 
 export const app = express();
 
-const corsOrigin = process.env.FRONTEND_URL ?? '*';
+const corsOrigin = process.env.FRONTEND_URL;
+if (!corsOrigin) {
+  logger.fatal('FRONTEND_URL environment variable is not set — refusing to start with wildcard CORS');
+  process.exit(1);
+}
 app.use(cors({ origin: corsOrigin }));
 
 app.use(helmet({
@@ -47,15 +51,21 @@ const analyzeLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many analysis requests, please slow down' },
 });
-// HTTP request logging (skip /health to avoid noise; redact auth tokens)
+// HTTP request logging (skip /health; allowlist safe headers only)
 app.use(pinoHttp({
   logger,
   autoLogging: { ignore: (req) => req.url === '/health' },
   serializers: {
     req(req) {
-      const headers = { ...req.headers };
-      if (headers.authorization) headers.authorization = '[REDACTED]';
-      return { method: req.method, url: req.url, headers };
+      return {
+        method: req.method,
+        url: req.url,
+        headers: {
+          'content-type': req.headers['content-type'],
+          'user-agent': req.headers['user-agent'],
+          'x-forwarded-for': req.headers['x-forwarded-for'],
+        },
+      };
     },
   },
 }));
@@ -81,7 +91,10 @@ const swaggerUiOptions: swaggerUi.SwaggerUiOptions = {
   },
 };
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+// Only expose API docs in non-production environments
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(openApiSpec, swaggerUiOptions));
+}
 app.use('/me', jwtCheck, meRouter);
 app.use('/checkout', jwtCheck, checkoutRouter);
 app.use('/games', jwtCheck, gameRouter);

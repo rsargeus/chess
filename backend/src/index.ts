@@ -4,7 +4,7 @@ import { initEngine, destroyEngine } from './stockfish';
 import { initWebSocketServer } from './wsServer';
 import logger from './logger';
 
-const REQUIRED_ENV = ['AUTH0_DOMAIN', 'AUTH0_AUDIENCE', 'MONGODB_URI'];
+const REQUIRED_ENV = ['AUTH0_DOMAIN', 'AUTH0_AUDIENCE', 'MONGODB_URI', 'FRONTEND_URL'];
 const missing = REQUIRED_ENV.filter(k => !process.env[k]);
 if (missing.length) {
   logger.fatal({ missing }, 'Missing required environment variables');
