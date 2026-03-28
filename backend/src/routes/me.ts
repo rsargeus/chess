@@ -8,8 +8,18 @@ const meRouter = Router();
 meRouter.get('/', async (req: Request, res: Response) => {
   const userId = req.auth!.payload.sub as string;
   try {
-    const roles = await getUserRoles(userId);
-    res.json({ premium: roles.includes('premium') });
+    const [roles, profile] = await Promise.all([
+      getUserRoles(userId),
+      UserProfile.findOne({ userId }, 'premiumExpiresAt'),
+    ]);
+    const hasPremiumRole = roles.includes('premium');
+    const premiumActive = hasPremiumRole &&
+      !!profile?.premiumExpiresAt &&
+      profile.premiumExpiresAt > new Date();
+    res.json({
+      premium: premiumActive,
+      premiumExpiresAt: premiumActive ? profile!.premiumExpiresAt : null,
+    });
   } catch (err) {
     const isAuth0Error = err instanceof Error && err.message.startsWith('Auth0');
     logger.error({ err, isAuth0Error }, 'GET /me failed');

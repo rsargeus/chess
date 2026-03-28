@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import Stripe from 'stripe';
 import { assignPremiumRole, invalidateRolesCache } from '../auth0Management';
+import { UserProfile } from '../models/UserProfile';
 import logger from '../logger';
 
 const router = Router();
@@ -27,9 +28,19 @@ router.post('/', async (req: Request, res: Response) => {
     }
 
     try {
-      await assignPremiumRole(userId);
+      const premiumExpiresAt = new Date();
+      premiumExpiresAt.setFullYear(premiumExpiresAt.getFullYear() + 1);
+
+      await Promise.all([
+        assignPremiumRole(userId),
+        UserProfile.findOneAndUpdate(
+          { userId },
+          { premiumExpiresAt },
+          { upsert: true }
+        ),
+      ]);
       invalidateRolesCache(userId);
-      logger.info({ userId, sessionId: session.id }, 'Premium role assigned');
+      logger.info({ userId, sessionId: session.id, premiumExpiresAt }, 'Premium role assigned');
     } catch (err) {
       logger.error({ err, userId }, 'Failed to assign premium role');
       // Return 500 so Stripe retries the webhook delivery
