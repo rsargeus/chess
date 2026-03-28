@@ -182,12 +182,13 @@ export async function analyzePosition(fen: string, previousFen?: string, playerM
   return res.json();
 }
 
-export async function createCheckoutSession(): Promise<string> {
+export async function createCheckoutSession(promoCode?: string): Promise<string> {
   const res = await fetch(`${API_BASE}/checkout`, {
     method: 'POST',
-    headers: await authHeaders(),
+    headers: { ...await authHeaders(), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ promoCode }),
   });
-  if (!res.ok) throw new Error('Failed to create checkout session');
-  const data = await res.json() as { url: string };
+  const data = await res.json() as { url: string; error?: string };
+  if (!res.ok) throw new Error(data.error || 'Failed to create checkout session');
   return data.url;
 }

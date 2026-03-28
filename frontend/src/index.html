@@ -873,6 +873,16 @@
     }
     .premium-once { font-family: 'Cinzel', serif; font-size: 0.72rem; letter-spacing: 0.06em; color: #b07840; margin-bottom: 20px; }
     .premium-pay-btn { width: 100%; padding: 12px; font-size: 0.88rem; }
+    .premium-promo { width: 100%; margin-bottom: 12px; }
+    .premium-promo-row { display: flex; gap: 8px; }
+    .premium-promo-input {
+      flex: 1; padding: 9px 12px; border-radius: 6px;
+      border: 1px solid #6b4c20; background: #2a1a0a; color: #e8c97a;
+      font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.05em;
+      outline: none;
+    }
+    .premium-promo-input::placeholder { color: #7a5830; }
+    .premium-promo-error { color: #e07050; font-size: 0.75rem; margin-top: 6px; min-height: 1em; text-align: left; }
 
     /* App wrapper */
     #app { display: contents; }
@@ -2409,7 +2419,13 @@
       <h2>Premium Membership</h2>
       <p class="premium-desc">Unlock the ability to play against the computer at all levels — from Beginner to Grandmaster.</p>
       <div class="premium-price">200 kr</div>
-      <p class="premium-once">One-time payment</p>
+      <p class="premium-once">12-month membership · One-time payment</p>
+      <div class="premium-promo">
+        <div class="premium-promo-row">
+          <input id="promo-code-input" class="premium-promo-input" type="text" placeholder="Discount code (optional)" autocomplete="off" spellcheck="false" />
+        </div>
+        <div id="promo-code-error" class="premium-promo-error"></div>
+      </div>
       <button id="payment-pay-btn" class="btn btn-primary premium-pay-btn">Pay 200 kr</button>
       <button id="payment-cancel-btn" class="modal-cancel">Cancel</button>
     </div>

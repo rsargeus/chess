@@ -124,6 +124,8 @@ const inviteCloseBtn = document.getElementById('invite-close-btn')!;
 const paymentModalEl = document.getElementById('payment-modal')!;
 const paymentPayBtn = document.getElementById('payment-pay-btn')!;
 const paymentCancelBtn = document.getElementById('payment-cancel-btn')!;
+const promoCodeInput = document.getElementById('promo-code-input') as HTMLInputElement;
+const promoCodeError = document.getElementById('promo-code-error')!;
 
 // Level modal elements
 const levelModalEl = document.getElementById('level-modal')!;
@@ -185,6 +187,8 @@ function showInviteModal(inviteCode: string): void {
 function showPaymentModal(): Promise<boolean> {
   return new Promise((resolve) => {
     paymentModalEl.classList.remove('hidden');
+    promoCodeInput.value = '';
+    promoCodeError.textContent = '';
     const cleanup = (r: boolean) => {
       paymentModalEl.classList.add('hidden');
       paymentPayBtn.removeEventListener('click', onPay);
@@ -194,11 +198,19 @@ function showPaymentModal(): Promise<boolean> {
     const onPay = async () => {
       paymentPayBtn.textContent = 'Loading…';
       paymentPayBtn.setAttribute('disabled', 'true');
+      promoCodeError.textContent = '';
       try {
-        const url = await api.createCheckoutSession();
+        const promoCode = promoCodeInput.value.trim() || undefined;
+        const url = await api.createCheckoutSession(promoCode);
         window.location.href = url;
-      } catch {
-        paymentPayBtn.textContent = 'Pay 20 kr';
+      } catch (err: any) {
+        const msg = err?.message || '';
+        if (msg.includes('Invalid promotion code')) {
+          promoCodeError.textContent = 'Invalid discount code.';
+        } else {
+          promoCodeError.textContent = 'Something went wrong. Please try again.';
+        }
+        paymentPayBtn.textContent = 'Pay 200 kr';
         paymentPayBtn.removeAttribute('disabled');
       }
     };
