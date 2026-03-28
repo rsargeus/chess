@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { Chess } from 'chess.js';
 import { analyzePosition } from '../stockfish';
 import { generateCoachMessage } from '../coaching';
+import logger from '../logger';
 
 const router = Router();
 
@@ -157,7 +158,7 @@ router.post('/', async (req: Request, res: Response) => {
       coachMessage,
     });
   } catch (err) {
-    console.error('POST /analyze error:', err);
+    logger.error({ err }, 'POST /analyze failed');
     res.status(500).json({ error: 'Analysis failed' });
   }
 });

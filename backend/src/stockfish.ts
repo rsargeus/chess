@@ -1,5 +1,6 @@
 import { spawn, ChildProcess } from 'child_process';
 import path from 'path';
+import logger from './logger';
 
 const LEVEL_CONFIG: Record<number, { elo?: number; movetime: number }> = {
   1:  { elo: 800,  movetime: 200 },
@@ -122,6 +123,7 @@ class StockfishEngine {
       const line = await this.waitFor(l => l.startsWith('bestmove'), cfg.movetime + 5000);
       const move = line.split(' ')[1];
       if (!move || move === '(none)') throw new Error('Stockfish returned no move');
+      logger.debug({ fen, level, move }, 'Stockfish best move');
       return move;
     });
   }
@@ -213,7 +215,7 @@ export async function initEngine(): Promise<void> {
   const { bin, args } = resolveEngine();
   engine = new StockfishEngine(bin, args);
   await engine.init();
-  console.log('Stockfish engine ready (ASM.JS build)');
+  logger.info('Stockfish engine ready (ASM.JS build)');
 }
 
 export async function getBestMove(fen: string, level: number): Promise<string> {

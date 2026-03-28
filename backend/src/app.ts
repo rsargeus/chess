@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import swaggerUi from 'swagger-ui-express';
+import pinoHttp from 'pino-http';
 import gameRouter from './routes/game';
 import checkoutRouter from './routes/checkout';
 import webhookRouter from './routes/webhook';
@@ -10,6 +11,7 @@ import meRouter from './routes/me';
 import analyzeRouter from './routes/analyze';
 import { jwtCheck } from './middleware/auth';
 import { openApiSpec } from './openapi';
+import logger from './logger';
 
 export const app = express();
 
@@ -36,6 +38,12 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
 });
+// HTTP request logging (skip /health to avoid noise)
+app.use(pinoHttp({
+  logger,
+  autoLogging: { ignore: (req) => req.url === '/health' },
+}));
+
 // Health check is exempt from rate limiting (used for backend wake-up probing)
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

@@ -1,4 +1,5 @@
 import Groq from 'groq-sdk';
+import logger from './logger';
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -83,12 +84,14 @@ Rules:
 - Do not start with "Great move!" or similar filler — get to the point
 - Write in English`;
 
+  const t0 = Date.now();
   const chat = await groq.chat.completions.create({
     model: 'llama-3.1-8b-instant',
     messages: [{ role: 'user', content: prompt }],
     max_tokens: 120,
     temperature: 0.5,
   });
+  logger.info({ moveQuality: input.moveQuality, isOpponent: input.isOpponent, ms: Date.now() - t0 }, 'Groq coaching response');
 
   return chat.choices[0]?.message?.content?.trim() ?? '';
 }
