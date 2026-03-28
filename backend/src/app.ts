@@ -38,10 +38,17 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
 });
-// HTTP request logging (skip /health to avoid noise)
+// HTTP request logging (skip /health to avoid noise; redact auth tokens)
 app.use(pinoHttp({
   logger,
   autoLogging: { ignore: (req) => req.url === '/health' },
+  serializers: {
+    req(req) {
+      const headers = { ...req.headers };
+      if (headers.authorization) headers.authorization = '[REDACTED]';
+      return { method: req.method, url: req.url, headers };
+    },
+  },
 }));
 
 // Health check is exempt from rate limiting (used for backend wake-up probing)
