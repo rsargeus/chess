@@ -108,7 +108,7 @@ class StockfishEngine {
 
       this.send('ucinewgame');
       this.send('isready');
-      await this.waitFor(l => l === 'readyok');
+      await this.waitFor(l => l === 'readyok', 5000);
 
       if (cfg.elo !== undefined) {
         this.send('setoption name UCI_LimitStrength value true');
@@ -128,7 +128,7 @@ class StockfishEngine {
     });
   }
 
-  async analyzePosition(fen: string, depth = 12): Promise<{
+  async analyzePosition(fen: string, depth = 8): Promise<{
     scoreCp: number; bestMove: string; pv: string;
     mateIn: number | null;
     alternatives: Array<{ scoreCp: number; mateIn: number | null; bestMove: string; pv: string }>;
@@ -138,7 +138,7 @@ class StockfishEngine {
 
       this.send('ucinewgame');
       this.send('isready');
-      await this.waitFor(l => l === 'readyok');
+      await this.waitFor(l => l === 'readyok', 5000);
       this.send('setoption name UCI_LimitStrength value false');
       this.send('setoption name MultiPV value 3');
       this.send(`position fen ${fen}`);
@@ -242,7 +242,7 @@ export async function getBestMove(fen: string, level: number): Promise<string> {
   return engine.getBestMove(fen, level);
 }
 
-export async function analyzePosition(fen: string, depth = 12): Promise<{
+export async function analyzePosition(fen: string, depth = 8): Promise<{
   scoreCp: number; bestMove: string; pv: string;
   mateIn: number | null;
   alternatives: Array<{ scoreCp: number; mateIn: number | null; bestMove: string; pv: string }>;
