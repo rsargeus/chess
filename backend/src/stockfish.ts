@@ -238,8 +238,8 @@ async function ensureEngine(): Promise<void> {
 }
 
 export async function getBestMove(fen: string, level: number): Promise<string> {
-  await ensureEngine();
-  return engine!.getBestMove(fen, level);
+  if (!engine?.ready) throw new Error('Engine not initialised');
+  return engine.getBestMove(fen, level);
 }
 
 export async function analyzePosition(fen: string, depth = 12): Promise<{
