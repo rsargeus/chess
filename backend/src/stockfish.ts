@@ -19,7 +19,7 @@ class StockfishEngine {
   private proc: ChildProcess;
   private buffer = '';
   private listeners: Array<(line: string) => boolean> = [];
-  private ready = false;
+  ready = false;
   private queue: Array<() => Promise<void>> = [];
   private running = false;
 
@@ -95,9 +95,9 @@ class StockfishEngine {
 
   async init(): Promise<void> {
     this.send('uci');
-    await this.waitFor(l => l === 'uciok');
+    await this.waitFor(l => l === 'uciok', 60000);
     this.send('isready');
-    await this.waitFor(l => l === 'readyok');
+    await this.waitFor(l => l === 'readyok', 30000);
     this.ready = true;
   }
 
@@ -211,16 +211,35 @@ function resolveEngine(): { bin: string; args: string[] } {
   return { bin: process.execPath, args: [asmJs] };
 }
 
+let engineInitPromise: Promise<void> | null = null;
+
 export async function initEngine(): Promise<void> {
   const { bin, args } = resolveEngine();
-  engine = new StockfishEngine(bin, args);
-  await engine.init();
-  logger.info('Stockfish engine ready (ASM.JS build)');
+  const newEngine = new StockfishEngine(bin, args);
+  try {
+    await newEngine.init();
+    engine = newEngine;
+    logger.info('Stockfish engine ready (ASM.JS build)');
+  } catch (err) {
+    newEngine.destroy();
+    engine = null;
+    throw err;
+  } finally {
+    engineInitPromise = null;
+  }
+}
+
+async function ensureEngine(): Promise<void> {
+  if (engine?.ready) return;
+  if (!engineInitPromise) {
+    engineInitPromise = initEngine();
+  }
+  await engineInitPromise;
 }
 
 export async function getBestMove(fen: string, level: number): Promise<string> {
-  if (!engine) throw new Error('Engine not initialised — call initEngine() first');
-  return engine.getBestMove(fen, level);
+  await ensureEngine();
+  return engine!.getBestMove(fen, level);
 }
 
 export async function analyzePosition(fen: string, depth = 12): Promise<{
@@ -228,8 +247,8 @@ export async function analyzePosition(fen: string, depth = 12): Promise<{
   mateIn: number | null;
   alternatives: Array<{ scoreCp: number; mateIn: number | null; bestMove: string; pv: string }>;
 }> {
-  if (!engine) throw new Error('Engine not initialised — call initEngine() first');
-  return engine.analyzePosition(fen, depth);
+  await ensureEngine();
+  return engine!.analyzePosition(fen, depth);
 }
 
 export function destroyEngine(): void {
