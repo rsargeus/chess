@@ -205,8 +205,13 @@ class StockfishEngine {
 let engine: StockfishEngine | null = null;
 
 function resolveEngine(): { bin: string; args: string[] } {
-  // Use the ASM.JS build from the stockfish npm package — works in any Node.js
-  // without WASM threading restrictions, communicates via stdin/stdout like a native binary.
+  // Prefer a native binary (downloaded by postinstall on Linux/Render) —
+  // starts in milliseconds vs 10–60 s for the ASM.js build.
+  const nativeBin = path.resolve(__dirname, '../bin/stockfish');
+  if (require('fs').existsSync(nativeBin)) {
+    return { bin: nativeBin, args: [] };
+  }
+  // Fall back to the ASM.JS build from the stockfish npm package.
   const asmJs = require.resolve('stockfish/bin/stockfish-18-asm.js');
   return { bin: process.execPath, args: [asmJs] };
 }
