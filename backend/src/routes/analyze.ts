@@ -142,8 +142,11 @@ router.post('/', async (req: Request, res: Response) => {
       }
     }
 
-    // Generate LLM coaching message (non-blocking — falls back to '' if unavailable)
-    const coachMessage = await generateCoachMessage({
+    // Send Stockfish results immediately so the eval bar and coach panel
+    // update without waiting for the Groq LLM call.
+    // Start Groq in parallel — it will finish and log but the client
+    // already has everything it needs.
+    const coachMessagePromise = generateCoachMessage({
       playerMoveSan: typeof playerMoveSan === 'string' ? playerMoveSan : null,
       moveQuality,
       evalDropCp,
@@ -168,8 +171,11 @@ router.post('/', async (req: Request, res: Response) => {
       pvPositions,
       pvStartMoveNum: parseInt(fen.split(' ')[5]) || 1,
       pvStartWhite: fen.split(' ')[1] === 'w',
-      coachMessage,
+      coachMessage: '',
     });
+
+    // Await in background so the process doesn't exit before Groq finishes
+    coachMessagePromise.catch(() => {});
   } catch (err) {
     logger.error({ err }, 'POST /analyze failed');
     res.status(500).json({ error: 'Analysis failed' });
