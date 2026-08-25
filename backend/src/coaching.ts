@@ -40,6 +40,8 @@ export interface CoachingInput {
   alternatives: Array<{ moveSan: string; scoreCp: number; mateIn: number | null }>;
   pv: string | null;
   isOpponent?: boolean;
+  openingName?: string | null;
+  openingEco?: string | null;
 }
 
 export async function generateCoachMessage(input: CoachingInput): Promise<string> {
@@ -48,6 +50,7 @@ export async function generateCoachMessage(input: CoachingInput): Promise<string
   const {
     playerMoveSan, moveQuality, evalDropCp, scoreCp,
     bestMoveSan, mateIn, alternatives, pv, isOpponent,
+    openingName, openingEco,
   } = input;
 
   const evalStr = mateIn != null
@@ -66,9 +69,11 @@ export async function generateCoachMessage(input: CoachingInput): Promise<string
   const opener = isOpponent ? 'Your opponent played' : 'You played';
   const moveNatural = playerMoveSan ? sanToNatural(playerMoveSan) : 'unknown';
 
+  const openingLine = openingName ? `Opening: ${openingName}${openingEco ? ` (ECO ${openingEco})` : ''}\n` : '';
+
   const prompt = `You are a friendly chess coach. Give brief, helpful feedback (2-3 sentences max) about ${possessive} last move.
 
-${opener}: ${moveNatural} (${playerMoveSan ?? ''})
+${openingLine}${opener}: ${moveNatural} (${playerMoveSan ?? ''})
 Move quality: ${moveQuality ?? 'unknown'}
 Eval drop: ${evalDropCp != null ? `${(evalDropCp / 100).toFixed(1)} pawns lost by ${subject}` : 'n/a'}
 Current eval: ${evalStr}
@@ -80,15 +85,17 @@ Rules:
 - Be concise (2-3 sentences)
 - Start with "${opener} their ${moveNatural}..." or "${opener} your ${moveNatural}..." — describe the move in natural language, never use chess notation like "Kd1"
 - Explain *why* the best move is better (tactics, structure, activity)
+- If an opening is given and this move is still within it, you may mention it's a known theoretical move in that opening
 - If it was a good or excellent move by the opponent, note it as a threat or challenge
 - Do not start with "Great move!" or similar filler — get to the point
 - Write in English`;
 
   const t0 = Date.now();
   const chat = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
+    model: 'openai/gpt-oss-20b',
+    reasoning_effort: 'low',
     messages: [{ role: 'user', content: prompt }],
-    max_tokens: 120,
+    max_tokens: 200,
     temperature: 0.5,
   });
   logger.info({ moveQuality: input.moveQuality, isOpponent: input.isOpponent, ms: Date.now() - t0 }, 'Groq coaching response');
