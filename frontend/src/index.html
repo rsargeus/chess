@@ -294,6 +294,15 @@
     .board-wrap {
       position: relative;
     }
+
+    #opening-label {
+      font-size: 0.72rem;
+      letter-spacing: 0.04em;
+      color: #a08050;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    #opening-label.hidden { display: none; }
     .board-wrap.empty::before {
       content: '';
       display: block;
@@ -402,7 +411,9 @@
       align-items: center;
     }
     .move-list-row #move-list { flex: 1; }
-    .move-list-row #resign-btn { flex-shrink: 0; width: 100px; }
+    .move-list-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+    .move-list-actions #resign-btn, .move-list-actions #play-from-btn { width: 110px; }
+    #play-from-btn.hidden { display: none; }
     .coach-row #undo-btn { flex-shrink: 0; width: 44px; }
     .nav-row {
       display: flex;
@@ -441,6 +452,9 @@
     .move-row.pv-temp .move-num { color: #5c3610; font-style: italic; }
     .move-row.pv-temp .move-san { color: #7a5030; font-style: italic; cursor: default; }
     .move-row.pv-temp .move-san:hover { color: #7a5030; }
+    .move-row.pv-temp .move-san.pv-active { color: #d4a848; background: rgba(180,130,40,0.18); border-radius: 3px; padding: 0 3px; }
+    .pv-move-span { color: #7a5030; font-style: italic; }
+    .pv-move-span.pv-active { color: #d4a848; background: rgba(180,130,40,0.18); border-radius: 3px; padding: 0 3px; font-style: italic; }
 
     /* Game over overlay */
     .overlay {
@@ -465,6 +479,20 @@
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
+    .overlay-opening {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      max-width: 360px;
+      text-align: center;
+    }
+    .overlay-opening.hidden { display: none; }
+    #overlay-opening-text {
+      font-size: 0.85rem;
+      color: #c8a870;
+      line-height: 1.6;
+    }
 
     /* Shared modal backdrop */
     .modal-backdrop {
@@ -474,7 +502,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 20;
+      z-index: 300;
     }
     .modal-backdrop.hidden { display: none; }
     .modal {
@@ -1403,6 +1431,28 @@
         flex-direction: row; align-items: center; gap: 10px; flex-shrink: 0;
       }
 
+      /* No vertical room to stack this above the board in row mode —
+         board height is a hard 100dvh calc, so it would squeeze in as a
+         column instead. Drop it in this cramped view. */
+      #opening-label { display: none; }
+
+      /* .panel's default max-width is min(70vh, 560px) — sized for portrait,
+         where vh is tall. In landscape, vh is tiny (short viewport height),
+         so that formula collapses the panel to ~200px regardless of how much
+         horizontal space .main actually has free, squeezing the coach panel's
+         content into overlapping labels. Let flex:1 size it from width instead. */
+      .panel {
+        max-width: none;
+        /* .main centers children vertically; .panel's content (eval bar,
+           coach panels, move list) is taller than the available height, so
+           without this it overflows equally above and below and gets
+           clipped at the top. Stretch to the full height and scroll inside
+           instead of overflowing the flex box. */
+        align-self: stretch;
+        max-height: 100%;
+        overflow-y: auto;
+      }
+
       .board-wrap { flex-shrink: 0; }
 
       /* Board sized by available height */
@@ -1651,6 +1701,9 @@
       display: flex; align-items: center; gap: 6px;
       flex: 1; min-width: 0;
     }
+    .coach-ask-row { display: flex; margin: 2px 0; }
+    .coach-ask-row.hidden { display: none; }
+    .coach-ask-btn { font-size: 0.72rem; padding: 3px 10px; }
     .coach-msg-row {
       display: flex; align-items: flex-start; gap: 4px;
     }
@@ -1726,6 +1779,14 @@
       font-size: 0.78rem; color: #d4a84b; letter-spacing: 0.04em;
       font-weight: 700;
     }
+    /* Long SAN in a squeezed panel (e.g. mobile landscape) must ellipsis
+       instead of overflowing into the neighboring divider/label. */
+    #coach-player-san, #coach-best-san, #coach-opp-san, #coach-opp-best-san {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
 
     .coach-spinner {
       position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
@@ -1775,6 +1836,564 @@
       color: #d4a84b;
       margin-left: 4px;
       align-self: center;
+    }
+
+    /* ── Training overlay ─────────────────────────────── */
+    #training-overlay {
+      position: fixed;
+      inset: 0;
+      background: #160c04;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+    }
+    #training-overlay.hidden { display: none !important; }
+
+    .training-header {
+      padding: 9px 16px;
+      background: #1c0e04;
+      border-bottom: 1px solid #5c3610;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+    .training-header h2 {
+      font-family: 'Cinzel', serif;
+      font-size: 1rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+    }
+    .training-lib-toggle-btn {
+      display: none;
+      margin-left: auto;
+      background: transparent;
+      border: 1px solid #5c3610;
+      color: #c8a870;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .training-info-handle {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .training-info-handle .handle-bar {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: #5c3610;
+    }
+    /* Live "N possible openings" indicator — always visible in the sheet's
+       peeked state during Explore mode, so users see the count without a
+       tap. Hidden by default (desktop's sidebar is already always visible;
+       Training-a-specific-line mode has nothing to count). */
+    .training-explore-counter {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid #3a2010;
+      color: #8ab870;
+      font-family: 'Cinzel', serif;
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      padding: 8px 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .training-explore-counter:hover { background: #1a1408; }
+    .training-explore-counter .tec-arrow { color: #5a4030; font-size: 0.7rem; }
+    .training-explore-counter.hidden { display: none !important; }
+    .training-header-back {
+      background: transparent;
+      border: 1px solid #5c3610;
+      color: #c8a870;
+      padding: 4px 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      font-family: 'Cinzel', serif;
+    }
+    .training-header-back:hover { border-color: #a07030; }
+
+    .training-layout {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Library */
+    .training-library {
+      width: 220px;
+      flex-shrink: 0;
+      background: #1a0e06;
+      border-right: 1px solid #3a2010;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .training-lib-search {
+      padding: 8px 10px;
+      border-bottom: 1px solid #2a1808;
+      flex-shrink: 0;
+    }
+    .training-lib-search input {
+      width: 100%;
+      background: #0e0804;
+      border: 1px solid #3a2010;
+      border-radius: 4px;
+      color: #d4c0a0;
+      padding: 5px 8px;
+      font-size: 0.78rem;
+      outline: none;
+    }
+    .training-lib-search input::placeholder { color: #6a5040; }
+    .training-lib-scroll { flex: 1; overflow-y: auto; }
+    .training-lib-scroll::-webkit-scrollbar { width: 4px; }
+    .training-lib-scroll::-webkit-scrollbar-thumb { background: #5c3610; border-radius: 2px; }
+
+    .tlib-cat {
+      padding: 8px 12px 3px;
+      font-size: 0.62rem;
+      color: #7a5830;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+    .tlib-group { }
+    .tlib-group-hdr {
+      padding: 6px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .tlib-group-hdr:hover { background: #24140a; }
+    .tlib-group-hdr.active { background: #2a1808; border-left-color: #d4a84b; }
+    .tlib-group-name { font-size: 0.79rem; flex: 1; }
+    .tlib-group-eco { font-size: 0.62rem; color: #7a5830; font-family: monospace; }
+    .tlib-arrow { font-size: 0.58rem; color: #5c3610; transition: transform 0.2s; }
+    .tlib-arrow.open { transform: rotate(90deg); }
+    .tlib-side {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+    .tlib-side-w { background: #e8d8b0; border: 1px solid #7a6840; }
+    .tlib-side-b { background: #3a2010; border: 1px solid #7a5830; }
+
+    .tlib-variants { display: none; background: #160c04; }
+    .tlib-variants.open { display: block; }
+    .tlib-variant {
+      padding: 5px 10px 5px 28px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-left: 3px solid transparent;
+      font-size: 0.74rem;
+      color: #a09070;
+      transition: background 0.1s;
+    }
+    .tlib-variant:hover { background: #1e1008; color: #c8a870; }
+    .tlib-variant.active { background: #1a0e04; border-left-color: #c8922a; color: #e0c080; }
+    .tlib-variant-eco { font-size: 0.6rem; font-family: monospace; color: #5a4030; margin-left: auto; }
+    .tlib-item.tlib-eliminated, .tlib-variant.tlib-eliminated {
+      opacity: 0.35;
+      text-decoration: line-through;
+      pointer-events: none;
+    }
+    .tlib-variant-explore { border-left-color: #4a6a3a; color: #8ab870; font-style: italic; }
+    .tlib-variant-explore:hover { background: #0e1a08; color: #aad890; }
+    .tlib-variant-explore.active { background: #0e1a08; border-left-color: #6a9a50; color: #aad890; }
+
+    .tlib-item {
+      padding: 7px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+    }
+    .tlib-item:hover { background: #24140a; }
+    .tlib-item.active { background: #2a1808; border-left-color: #d4a84b; }
+    .tlib-item-name { font-size: 0.79rem; flex: 1; }
+    .tlib-item-eco { font-size: 0.62rem; color: #7a5830; font-family: monospace; }
+
+    /* Center */
+    .training-center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 16px;
+      overflow: hidden;
+    }
+    .training-status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 7px 14px;
+      background: #1a0e06;
+      border: 1px solid #3a2010;
+      border-radius: 7px;
+      width: 100%;
+      max-width: 480px;
+    }
+    .tstat-dot {
+      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+      transition: background 0.3s;
+    }
+    .tstat-dot.you   { background: #4caf50; box-shadow: 0 0 5px #4caf5080; }
+    .tstat-dot.ai    { background: #ff9800; box-shadow: 0 0 5px #ff980080; }
+    .tstat-dot.ok    { background: #4caf50; }
+    .tstat-dot.err   { background: #f44336; }
+    .tstat-dot.done  { background: #d4a84b; box-shadow: 0 0 5px #d4a84b80; }
+    .tstat-text { font-size: 0.81rem; flex: 1; }
+    .tstat-progress { font-size: 0.7rem; color: #7a5830; font-family: 'Cinzel', serif; white-space: nowrap; }
+
+    /* Training board — same size as game board */
+    #training-board-wrap { position: relative; }
+    #training-board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      width: min(70vh, 480px);
+      height: min(70vh, 480px);
+      border: 2px solid #c8922a;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    /* Progress dots */
+    .training-dots {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 480px;
+    }
+    .tdot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #2a1808; border: 1px solid #5c3610;
+      transition: background 0.2s;
+    }
+    .tdot.done    { background: #d4a84b; border-color: #d4a84b; }
+    .tdot.current { background: #4caf50; border-color: #4caf50; box-shadow: 0 0 4px #4caf5080; }
+
+    /* Hint overlay on squares */
+    .square.training-hint-from { outline: 3px solid #42a5f5; outline-offset: -3px; }
+    .square.training-hint-to   { outline: 3px solid #1565c0; outline-offset: -3px; }
+
+    /* Right panel */
+    .training-info {
+      width: 250px;
+      flex-shrink: 0;
+      background: #1a0e06;
+      border-left: 1px solid #3a2010;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .training-info-scroll {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .training-info-scroll::-webkit-scrollbar { width: 4px; }
+    .training-info-scroll::-webkit-scrollbar-thumb { background: #5c3610; border-radius: 2px; }
+
+    .tinfo-opening-name {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #f0c97a;
+      line-height: 1.3;
+    }
+    .tinfo-variant-name {
+      font-size: 0.72rem;
+      color: #c8922a;
+      margin-top: 3px;
+    }
+    .tinfo-explore-variants li { transition: color 0.3s, text-decoration 0.3s; }
+    .tinfo-explore-variants li.variant-eliminated {
+      text-decoration: line-through;
+      color: #4a3820;
+    }
+
+    @keyframes variantFlash {
+      0%   { color: #c8922a; }
+      20%  { color: #ffe066; background: #3a2a00; border-radius: 4px; padding: 1px 4px; }
+      80%  { color: #ffe066; background: #3a2a00; border-radius: 4px; padding: 1px 4px; }
+      100% { color: #c8922a; background: transparent; padding: 0; }
+    }
+    .tinfo-variant-name.variant-flash {
+      animation: variantFlash 1.8s ease forwards;
+    }
+    .tinfo-side-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: #24140a;
+      border: 1px solid #3a2010;
+      color: #a09070;
+    }
+    .tinfo-section-label {
+      font-size: 0.6rem;
+      color: #7a5830;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .tinfo-desc { font-size: 0.77rem; color: #c0a880; line-height: 1.6; }
+    .tinfo-moves {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 3px;
+    }
+    .tinfo-mv {
+      font-size: 0.68rem;
+      font-family: monospace;
+      padding: 2px 5px;
+      border-radius: 3px;
+      background: #24140a;
+      border: 1px solid #3a2010;
+      color: #c8a870;
+      transition: background 0.2s;
+    }
+    .tinfo-mv.done    { background: #2a3a20; border-color: #4a6a30; color: #8bc34a; }
+    .tinfo-mv.current { background: #0e2a20; border-color: #2a7060; color: #4db6ac; font-weight: 700; }
+    .tinfo-tips { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .tinfo-tips li {
+      font-size: 0.75rem; color: #c0a880; line-height: 1.4;
+      padding-left: 13px; position: relative;
+    }
+    .tinfo-tips li::before {
+      content: '♟'; position: absolute; left: 0;
+      color: #d4a84b; font-size: 0.6rem; top: 1px;
+    }
+    .tinfo-feedback {
+      padding: 8px 10px;
+      border-radius: 5px;
+      font-size: 0.75rem;
+      line-height: 1.5;
+      display: none;
+    }
+    .tinfo-feedback.ok     { background: #1a2e12; border: 1px solid #3a6020; color: #8bc34a; display: block; }
+    .tinfo-feedback.err    { background: #2e1212; border: 1px solid #6a2020; color: #ef9a9a; display: block; }
+    .tinfo-feedback.hint   { background: #12202e; border: 1px solid #204060; color: #90caf9; display: block; }
+    .tinfo-feedback.branch { background: #1a1808; border: 1px solid #4a4010; color: #e0c870; display: block; }
+
+    .training-actions {
+      padding: 10px;
+      border-top: 1px solid #3a2010;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+    .training-actions .btn {
+      width: 100%;
+      padding: 7px;
+      font-size: 0.72rem;
+    }
+    .training-hint-always-label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: #c8a870;
+      cursor: pointer;
+      padding: 2px 4px;
+    }
+    .training-hint-always-label input[type="checkbox"] {
+      accent-color: #c8a870;
+      cursor: pointer;
+    }
+
+    /* Color picker in global explore */
+    .tinfo-color-picker {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0 6px;
+    }
+    .tinfo-color-btn {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #5a4520;
+      background: #1a1408;
+      color: #c8a870;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.78rem;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .tinfo-color-btn:hover { background: #2a2010; border-color: #c8a870; }
+    .tinfo-color-btn.active { background: #2a3a20; border-color: #8ab870; color: #8ab870; font-weight: 600; }
+
+    /* Empty state */
+    .tinfo-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 10px;
+      color: #5a4030;
+      text-align: center;
+      padding: 20px;
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+    .tinfo-empty .icon { font-size: 2rem; margin-bottom: 4px; }
+
+    /* Completion banner */
+    .training-complete-banner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(10,5,0,0.9);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 4px;
+      text-align: center;
+      padding: 20px;
+    }
+    .training-complete-banner.show { display: flex; }
+    .tcb-icon { font-size: 2.5rem; }
+    .tcb-title { font-family: 'Cinzel', serif; font-size: 1rem; color: #f0c97a; }
+    .tcb-sub { font-size: 0.77rem; color: #a09070; line-height: 1.5; max-width: 280px; }
+    .tcb-btns { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 4px; }
+    .tcb-btns .btn { padding: 7px 14px; font-size: 0.72rem; }
+
+    /* ── Training overlay: mobile portrait (<=768px) ──────────────── */
+    @media (max-width: 768px) {
+      .training-header { padding: 8px 10px; gap: 8px; }
+      .training-header h2 { font-size: 0.86rem; }
+      .training-lib-toggle-btn { display: inline-flex; align-items: center; }
+
+      .training-layout { position: relative; overflow: hidden; }
+
+      /* Library becomes a full-screen slide-in drawer */
+      .training-library {
+        position: absolute;
+        inset: 0;
+        z-index: 20;
+        width: 100%;
+        border-right: none;
+        transform: translateX(-100%);
+        transition: transform 0.22s ease;
+      }
+      .training-library.mobile-open { transform: translateX(0); }
+
+      /* .training-center is the only in-flow child once library/info become
+         absolute/fixed, so it stretches to the full overlay height. With
+         justify-content:flex-start the board hugs the top and everything
+         below it (down to the collapsed sheet's peek) is one big dead
+         block of flat background — reads as a broken/empty screen. Center
+         instead, and reserve room for the sheet's peek height so the
+         centering happens in the space actually visible above it. */
+      .training-center { padding: 10px 8px 8px; padding-bottom: 64px; gap: 8px; justify-content: center; }
+      .training-status-bar { max-width: 100%; }
+      #training-board { width: min(88vw, 480px); height: min(88vw, 480px); }
+      .training-dots { max-width: 100%; }
+
+      /* Info + actions become a bottom sheet, peeking the hint button when collapsed */
+      .training-info {
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        width: 100%;
+        max-height: 72vh;
+        border-left: none;
+        border-top: 1px solid #3a2010;
+        border-radius: 14px 14px 0 0;
+        box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+        transform: translateY(calc(100% - 64px));
+        transition: transform 0.25s ease;
+        z-index: 15;
+        overflow-y: auto;
+      }
+      .training-info.mobile-expanded { transform: translateY(0); }
+
+      .training-info-handle { display: flex; order: -3; }
+      .training-explore-counter { display: flex; order: -2; }
+      .training-actions {
+        order: -1;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 4px 10px 8px;
+      }
+      .training-actions .btn { width: auto; flex: 1 1 auto; }
+      /* Collapsed: clip to one clean row (hint button) instead of letting
+         wrapped controls dangle half-visible past the viewport edge. */
+      .training-info:not(.mobile-expanded) .training-actions {
+        max-height: 40px;
+        overflow: hidden;
+      }
+      /* The 64px collapsed peek only has room for handle + one row. When the
+         live counter is showing (Explore mode with matches), it takes that
+         row instead of the hint button — expand the sheet to reach hint. */
+      .training-info:not(.mobile-expanded) .training-explore-counter:not(.hidden) ~ .training-actions {
+        display: none;
+      }
+      .training-info-scroll { padding: 8px 14px 20px; }
+    }
+
+    /* ── Training overlay: mobile landscape ───────────────────────── */
+    @media (max-width: 900px) and (orientation: landscape) and (max-height: 500px) {
+      .training-layout { flex-direction: row; }
+      .training-library { display: none; }
+      .training-lib-toggle-btn { display: none; }
+      .training-center { padding: 6px; gap: 6px; }
+      #training-board { width: min(62vh, 340px); height: min(62vh, 340px); }
+      .training-info {
+        position: static;
+        width: 230px;
+        max-height: none;
+        transform: none;
+        border-radius: 0;
+        border-top: none;
+        border-left: 1px solid #3a2010;
+        box-shadow: none;
+        overflow-y: auto;
+      }
+      .training-info-handle { display: none; }
+      /* Landscape has no collapsed-peek concept (full height, always
+         scrollable) — the portrait rule that hides .training-actions
+         when the counter is showing can still match here on small
+         landscape phones (width<=768 overlaps this query); undo it. */
+      .training-explore-counter { display: none; }
+      .training-info .training-actions { display: flex; max-height: none; overflow: visible; }
+      .training-actions { flex-direction: column; }
+      .training-actions .btn { width: 100%; }
     }
   </style>
 </head>
@@ -2054,6 +2673,7 @@
   <header>
     <h1>Chess</h1>
     <button id="lobby-btn" class="btn btn-secondary">Lobby</button>
+    <button id="training-btn" class="btn btn-secondary">♟ Training</button>
     <button id="new-game-btn" class="btn btn-primary">New Game</button>
     <div class="header-spacer"></div>
     <div class="user-info">
@@ -2101,6 +2721,7 @@
 
     <main class="main">
       <div class="board-column">
+      <div id="opening-label" class="hidden"></div>
       <div class="board-wrap empty">
         <div id="board" class="board"></div>
       </div>
@@ -2168,6 +2789,9 @@
               <span id="coach-opp-best-san"></span>
             </div>
           </div>
+          <div id="coach-opp-ask-row" class="coach-ask-row hidden">
+            <button id="coach-opp-ask-btn" class="btn btn-secondary coach-ask-btn">Ask coach</button>
+          </div>
           <div id="coach-opp-msg-row" class="coach-msg-row hidden">
             <div id="coach-opp-msg" class="coach-msg"></div>
             <button id="coach-opp-speak-btn" class="coach-speak-btn" title="Read aloud">🔊</button>
@@ -2194,13 +2818,16 @@
                 <div class="coach-spin-dot"></div>
               </div>
             </div>
+            <button id="undo-btn" class="btn btn-secondary hidden" disabled title="Undo your last move">↩</button>
             <button id="best-play-btn" class="btn btn-secondary hidden" title="Show best move on board">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 4a8 8 0 0 1 6.928 4H16.5a1 1 0 0 0 0 2h5a1 1 0 0 0 1-1V4a1 1 0 0 0-2 0v2.101A9.98 9.98 0 0 0 12 2C6.477 2 2 6.477 2 12a1 1 0 0 0 2 0 8 8 0 0 1 8-8Z"/>
                 <path d="M12 20a8 8 0 0 1-6.928-4H7.5a1 1 0 0 0 0-2h-5a1 1 0 0 0-1 1v5a1 1 0 0 0 2 0v-2.101A9.98 9.98 0 0 0 12 22c5.523 0 10-4.477 10-10a1 1 0 0 0-2 0 8 8 0 0 1-8 8Z"/>
               </svg>
             </button>
-            <button id="undo-btn" class="btn btn-secondary hidden" disabled title="Undo your last move">↩</button>
+          </div>
+          <div id="coach-ask-row" class="coach-ask-row hidden">
+            <button id="coach-ask-btn" class="btn btn-secondary coach-ask-btn">Ask coach</button>
           </div>
           <div id="coach-msg-row" class="coach-msg-row hidden">
             <div id="coach-msg" class="coach-msg"></div>
@@ -2211,7 +2838,10 @@
         </div>
         <div class="move-list-row">
           <div id="move-list" class="hidden"></div>
-          <button id="resign-btn" class="btn btn-secondary hidden">Resign</button>
+          <div class="move-list-actions">
+            <button id="play-from-btn" class="btn btn-secondary hidden">Play from here</button>
+            <button id="resign-btn" class="btn btn-secondary hidden">Resign</button>
+          </div>
         </div>
         <div class="nav-row">
           <button id="nav-back-btn" class="btn btn-secondary hidden" aria-label="Previous move">&#8592;</button>
@@ -2283,6 +2913,10 @@
   <!-- Game over overlay -->
   <div id="overlay" class="overlay hidden">
     <div id="overlay-msg"></div>
+    <div id="overlay-opening" class="overlay-opening hidden">
+      <p id="overlay-opening-text"></p>
+      <button id="overlay-opening-btn" class="btn btn-secondary">Träna linjen →</button>
+    </div>
     <button id="overlay-new-game" class="btn btn-primary">New Game</button>
   </div>
 
@@ -2449,6 +3083,72 @@
         <button id="level-start-btn" class="btn btn-primary">Start Game</button>
       </div>
       <button id="level-cancel-btn" class="modal-cancel">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Training overlay -->
+  <div id="training-overlay" class="hidden">
+    <div class="training-header">
+      <button class="training-header-back" id="training-close-btn">← Tillbaka</button>
+      <h2>Öppningsskola</h2>
+      <button class="training-lib-toggle-btn" id="training-lib-toggle-btn">☰ Bibliotek</button>
+    </div>
+    <div class="training-layout">
+
+      <!-- Left: library -->
+      <div class="training-library" id="training-library">
+        <div class="training-lib-search">
+          <input type="text" id="training-search" placeholder="Sök öppning…" />
+        </div>
+        <div class="training-lib-scroll" id="training-lib-scroll"></div>
+      </div>
+
+      <!-- Center: board -->
+      <div class="training-center">
+        <div class="training-status-bar">
+          <div class="tstat-dot" id="tstat-dot"></div>
+          <div class="tstat-text" id="tstat-text">Välj en öppning till vänster för att börja träna.</div>
+          <div class="tstat-progress" id="tstat-progress"></div>
+        </div>
+        <div id="training-board-wrap">
+          <div id="training-board"></div>
+          <div class="training-complete-banner" id="training-complete-banner">
+            <div class="tcb-icon">🏆</div>
+            <div class="tcb-title" id="tcb-title">Varianten klar!</div>
+            <div class="tcb-sub" id="tcb-sub"></div>
+            <div class="tcb-btns">
+              <button class="btn btn-primary" id="tcb-continue-btn">Fortsätt mot AI</button>
+              <button class="btn btn-secondary" id="tcb-retry-btn">Öva igen</button>
+            </div>
+          </div>
+        </div>
+        <div class="training-dots" id="training-dots"></div>
+      </div>
+
+      <!-- Right: info -->
+      <div class="training-info" id="training-info">
+        <div class="training-info-handle" id="training-info-handle"><span class="handle-bar"></span></div>
+        <button type="button" id="training-explore-counter" class="training-explore-counter hidden">
+          <span id="training-explore-counter-text"></span><span class="tec-arrow">›</span>
+        </button>
+        <div class="training-info-scroll" id="training-info-content">
+          <div class="tinfo-empty">
+            <div class="icon">♟</div>
+            <p>Välj en öppning i biblioteket för att se beskrivning och börja träna.</p>
+          </div>
+        </div>
+        <div class="training-actions" id="training-actions" style="display:none">
+          <button class="btn btn-secondary" id="training-hint-btn">💡 Visa ledtråd</button>
+          <label class="training-hint-always-label">
+            <input type="checkbox" id="training-hint-always"> Visa ledtråd alltid
+          </label>
+          <label class="training-hint-always-label">
+            <input type="checkbox" id="training-auto-opponent" checked> Motståndaren spelar automatiskt
+          </label>
+          <button class="btn btn-secondary" id="training-retry-btn">↺ Börja om varianten</button>
+        </div>
+      </div>
+
     </div>
   </div>
 

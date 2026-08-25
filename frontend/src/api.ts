@@ -53,11 +53,16 @@ export interface MoveResult {
   computerMove: { san: string; from: string; to: string } | null;
 }
 
-export async function createGame(mode: GameMode, computerLevel?: number): Promise<GameState> {
+export async function createGame(
+  mode: GameMode,
+  computerLevel?: number,
+  openingMoves?: { from: string; to: string; promotion?: string }[],
+  playerSide?: 'white' | 'black'
+): Promise<GameState> {
   const res = await fetch(BASE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...await authHeaders() },
-    body: JSON.stringify({ mode, computerLevel }),
+    body: JSON.stringify({ mode, computerLevel, openingMoves, playerSide }),
   });
   if (!res.ok) throw new Error('Failed to create game');
   return res.json();
@@ -105,6 +110,19 @@ export async function undoMove(gameId: string): Promise<GameState> {
   if (!res.ok) {
     const data = await res.json();
     throw new Error(data.error ?? 'Failed to undo move');
+  }
+  return res.json();
+}
+
+export async function truncateMoves(gameId: string, keepMoveCount: number): Promise<GameState> {
+  const res = await fetch(`${BASE}/${gameId}/truncate`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...await authHeaders() },
+    body: JSON.stringify({ keepMoveCount }),
+  });
+  if (!res.ok) {
+    const data = await res.json();
+    throw new Error(data.error ?? 'Failed to truncate game');
   }
   return res.json();
 }
@@ -185,6 +203,31 @@ export async function analyzePosition(fen: string, previousFen?: string, playerM
   });
   if (!res.ok) throw new Error('Analysis failed');
   return res.json();
+}
+
+export interface CoachRequest {
+  playerMoveSan: string | null;
+  moveQuality: string | null;
+  evalDropCp: number | null;
+  scoreCp: number;
+  bestMoveSan: string | null;
+  mateIn: number | null;
+  alternatives: Array<{ moveSan: string; scoreCp: number; mateIn: number | null }>;
+  pv: string | null;
+  isOpponent?: boolean;
+  openingName?: string | null;
+  openingEco?: string | null;
+}
+
+export async function requestCoachMessage(input: CoachRequest): Promise<string> {
+  const res = await fetch(`${API_BASE}/coach`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...await authHeaders() },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw new Error('Coach unavailable');
+  const data = await res.json() as { coachMessage: string };
+  return data.coachMessage;
 }
 
 export async function createCheckoutSession(promoCode?: string): Promise<string> {

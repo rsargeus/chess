@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame, listGames, getGame, postMove, resignGame } from '../api';
+import { createGame, listGames, getGame, postMove, resignGame, getMe, createCheckoutSession, joinGame, undoMove, analyzePosition } from '../api';
 
 vi.mock('../auth', () => ({
   getToken: vi.fn().mockResolvedValue('mock-token'),
+  logout: vi.fn().mockResolvedValue(undefined),
 }));
 
 const mockFetch = vi.fn();
@@ -116,5 +117,127 @@ describe('resignGame', () => {
     expect(mockFetch).toHaveBeenCalledWith('/games/abc123', expect.objectContaining({
       method: 'DELETE',
     }));
+  });
+});
+
+describe('undoMove', () => {
+  it('sends POST /games/:id/undo and returns updated game state', async () => {
+    mockFetch.mockReturnValueOnce(mockOk(GAME_STATE));
+
+    const result = await undoMove('abc123');
+
+    expect(mockFetch).toHaveBeenCalledWith('/games/abc123/undo', expect.objectContaining({
+      method: 'POST',
+    }));
+    expect(result.gameId).toBe('abc123');
+  });
+
+  it('throws with server error message on failure', async () => {
+    mockFetch.mockReturnValueOnce(mockError(400, { error: 'No moves to undo' }));
+    await expect(undoMove('abc123')).rejects.toThrow('No moves to undo');
+  });
+});
+
+describe('joinGame', () => {
+  it('sends POST /games/join/:inviteCode and returns game state', async () => {
+    mockFetch.mockReturnValueOnce(mockOk(GAME_STATE));
+
+    const result = await joinGame('abc123def456');
+
+    expect(mockFetch).toHaveBeenCalledWith('/games/join/abc123def456', expect.objectContaining({
+      method: 'POST',
+    }));
+    expect(result.gameId).toBe('abc123');
+  });
+
+  it('throws with server error message on failure', async () => {
+    mockFetch.mockReturnValueOnce(mockError(404, { error: 'Game not found' }));
+    await expect(joinGame('000000000000')).rejects.toThrow('Game not found');
+  });
+});
+
+describe('getMe', () => {
+  it('returns premium status', async () => {
+    mockFetch.mockReturnValueOnce(mockOk({ premium: false }));
+
+    const result = await getMe();
+    expect(result.premium).toBe(false);
+  });
+
+  it('throws and triggers logout on 404', async () => {
+    const { logout } = await import('../auth');
+    const mockLogout = vi.mocked(logout);
+
+    mockFetch.mockReturnValueOnce(Promise.resolve({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve({}),
+    }));
+
+    await expect(getMe()).rejects.toThrow('User not found');
+    expect(mockLogout).toHaveBeenCalled();
+  });
+});
+
+describe('createCheckoutSession', () => {
+  it('sends POST /checkout and returns redirect URL', async () => {
+    mockFetch.mockReturnValueOnce(mockOk({ url: 'https://checkout.stripe.com/test' }));
+
+    const url = await createCheckoutSession();
+    expect(url).toBe('https://checkout.stripe.com/test');
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.promoCode).toBeUndefined();
+  });
+
+  it('includes promoCode in body when provided', async () => {
+    mockFetch.mockReturnValueOnce(mockOk({ url: 'https://checkout.stripe.com/test' }));
+
+    await createCheckoutSession('5KR');
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.promoCode).toBe('5KR');
+  });
+
+  it('throws with server error when promo code is invalid', async () => {
+    mockFetch.mockReturnValueOnce(mockError(400, { error: 'Invalid promotion code' }));
+    await expect(createCheckoutSession('INVALID')).rejects.toThrow('Invalid promotion code');
+  });
+});
+
+describe('analyzePosition', () => {
+  it('sends POST /analyze with fen and returns analysis', async () => {
+    const mockResult = {
+      scoreCp: 30,
+      bestMove: 'e2e4',
+      bestMoveSan: 'e4',
+      bestMovePosition: null,
+      moveQuality: null,
+      evalDropCp: null,
+      mateIn: null,
+      alternatives: [],
+      pv: null,
+      pvPositions: [],
+      pvStartMoveNum: 1,
+      pvStartWhite: true,
+      coachMessage: 'Good move!',
+    };
+    mockFetch.mockReturnValueOnce(mockOk(mockResult));
+
+    const result = await analyzePosition(INITIAL_FEN);
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.fen).toBe(INITIAL_FEN);
+    expect(result.bestMove).toBe('e2e4');
+    expect(result.coachMessage).toBe('Good move!');
+  });
+
+  it('includes previousFen and playerMoveSan when provided', async () => {
+    mockFetch.mockReturnValueOnce(mockOk({ scoreCp: 0, bestMove: 'e2e4', bestMoveSan: null, bestMovePosition: null, moveQuality: 'good', evalDropCp: 5, mateIn: null, alternatives: [], pv: null, pvPositions: [], pvStartMoveNum: 1, pvStartWhite: true, coachMessage: '' }));
+
+    await analyzePosition('rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', INITIAL_FEN, 'e4');
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body.previousFen).toBe(INITIAL_FEN);
+    expect(body.playerMoveSan).toBe('e4');
   });
 });

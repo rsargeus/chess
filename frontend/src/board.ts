@@ -189,6 +189,13 @@ export class Board {
     this.render();
   }
 
+  setInteractive(interactive: boolean): void {
+    this.interactive = interactive;
+    this.selected = null;
+    this.highlights = new Set();
+    this.render();
+  }
+
   private render(): void {
     this.container.innerHTML = '';
     this.container.className = 'board';

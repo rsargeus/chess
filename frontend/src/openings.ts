@@ -17,6 +17,42 @@ export interface Opening {
   lines: OpeningLine[];
 }
 
+export interface OpeningMatch {
+  opening: Opening;
+  line: OpeningLine;
+  matchedPlies: number;
+  /** true if the player left the prepared line before it ended */
+  deviated: boolean;
+  /** true if the player played the entire prepared line */
+  completed: boolean;
+}
+
+const MIN_MATCH_PLIES = 4; // require at least 2 full moves before calling it a match
+
+/** Finds the opening line with the longest matching prefix against a played SAN move list. */
+export function detectOpening(playedSan: string[]): OpeningMatch | null {
+  let best: OpeningMatch | null = null;
+
+  for (const opening of OPENINGS) {
+    for (const line of opening.lines) {
+      let i = 0;
+      while (i < line.moves.length && i < playedSan.length && line.moves[i] === playedSan[i]) i++;
+      if (i < MIN_MATCH_PLIES) continue;
+      if (!best || i > best.matchedPlies) {
+        best = {
+          opening,
+          line,
+          matchedPlies: i,
+          deviated: i < line.moves.length && i < playedSan.length,
+          completed: i === line.moves.length,
+        };
+      }
+    }
+  }
+
+  return best;
+}
+
 export const OPENINGS: Opening[] = [
 
   // ── e4  ·  VIT ────────────────────────────────────────────────────────────

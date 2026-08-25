@@ -4,6 +4,9 @@ import { initAuth, isAuthenticated, getUser, loginWithGoogle, loginWithEmailPass
 import { playMove, playCapture, playCheck, playGameOver, unlockAudio, playLobbyMusic, stopLobbyMusic, toggleMute, isMuted, isLobbyPlaying } from './sound';
 import type { UserProfileData } from './api';
 import { connectToGame, disconnectFromGame } from './ws-client';
+import { OPENINGS, detectOpening } from './openings';
+import type { Opening, OpeningLine } from './openings';
+import { TrainingSession, OpeningExploreSession, GlobalExploreSession } from './training';
 
 const LEVELS: Record<number, string> = {
   1: 'Beginner',
@@ -28,6 +31,7 @@ let viewIndex = 0;
 let currentPlayerColor: 'w' | 'b' | null = null; // null = not multiplayer
 let currentMode: api.GameMode | null = null;
 let submittingMove = false;
+let pendingOpeningMoves: { from: string; to: string }[] = [];
 
 const INITIAL_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
 
@@ -44,7 +48,9 @@ const statusEl       = document.getElementById('status')!;
 const moveListEl     = document.getElementById('move-list')!;
 const gameListEl     = document.getElementById('game-list') as HTMLDivElement;
 const newGameBtn     = document.getElementById('new-game-btn')!;
+const trainingBtn    = document.getElementById('training-btn') as HTMLButtonElement;
 const resignBtn      = document.getElementById('resign-btn')!;
+const playFromBtn    = document.getElementById('play-from-btn') as HTMLButtonElement;;
 const navBackBtn     = document.getElementById('nav-back-btn')!;
 const navFwdBtn      = document.getElementById('nav-fwd-btn')!;
 const capturedPiecesEl  = document.getElementById('captured-pieces')!;
@@ -74,8 +80,12 @@ const coachPvEl = document.getElementById('coach-pv')!;
 const coachOppPvEl = document.getElementById('coach-opp-pv')!;
 const coachMsgEl = document.getElementById('coach-msg')!;
 const coachMsgRowEl = document.getElementById('coach-msg-row')!;
+const coachAskRowEl = document.getElementById('coach-ask-row')!;
+const coachAskBtn = document.getElementById('coach-ask-btn') as HTMLButtonElement;
 const coachOppMsgEl = document.getElementById('coach-opp-msg')!;
 const coachOppMsgRowEl = document.getElementById('coach-opp-msg-row')!;
+const coachOppAskRowEl = document.getElementById('coach-opp-ask-row')!;
+const coachOppAskBtn = document.getElementById('coach-opp-ask-btn') as HTMLButtonElement;
 const coachSpeakBtn = document.getElementById('coach-speak-btn') as HTMLButtonElement;
 const coachOppSpeakBtn = document.getElementById('coach-opp-speak-btn') as HTMLButtonElement;
 const coachAltsEl = document.getElementById('coach-alts')!;
@@ -103,9 +113,13 @@ const muteBtn      = document.getElementById('mute-btn')!;
 const muteIconOn   = document.getElementById('mute-icon-on')!;
 const muteIconOff  = document.getElementById('mute-icon-off')!;
 
-const overlayEl      = document.getElementById('overlay')!;
-const overlayMsg     = document.getElementById('overlay-msg')!;
-const overlayNewGame = document.getElementById('overlay-new-game')!;
+const openingLabelEl    = document.getElementById('opening-label')!;
+const overlayEl         = document.getElementById('overlay')!;
+const overlayMsg        = document.getElementById('overlay-msg')!;
+const overlayNewGame    = document.getElementById('overlay-new-game')!;
+const overlayOpeningEl   = document.getElementById('overlay-opening')!;
+const overlayOpeningText = document.getElementById('overlay-opening-text')!;
+const overlayOpeningBtn  = document.getElementById('overlay-opening-btn')!;
 
 // Mode modal elements
 const modeModalEl = document.getElementById('mode-modal')!;
@@ -275,14 +289,21 @@ async function startNewGame(): Promise<void> {
     return;
   }
 
-  const state = await api.createGame('vs_computer', level);
+  const opening = pendingOpeningMoves.length ? [...pendingOpeningMoves] : undefined;
+  pendingOpeningMoves = [];
+  const state = await api.createGame('vs_computer', level, opening);
   beginGame(state);
 }
 
 function isMyTurn(turn: 'w' | 'b', mode: api.GameMode, waitingForOpponent: boolean): boolean {
-  if (mode !== 'multiplayer') return true;
-  if (waitingForOpponent) return false;
-  return currentPlayerColor === turn;
+  if (mode === 'multiplayer') {
+    if (waitingForOpponent) return false;
+    return currentPlayerColor === turn;
+  }
+  if (mode === 'vs_computer' && currentPlayerColor !== null) {
+    return currentPlayerColor === turn;
+  }
+  return true;
 }
 
 function isFlipped(): boolean {
@@ -318,14 +339,38 @@ function beginGame(state: api.GameState): void {
   else undoBtnEl.classList.add('hidden');
   board = new Board(boardEl, handleMove);
   const interactive = isMyTurn(state.turn, state.mode, state.waitingForOpponent);
-  board.setFen(state.fen, interactive, isFlipped(), null);
-  setMoveHistory([]);
+  board.setFen(state.fen, interactive, isFlipped(), lastMoveOf(state.moves));
+  setMoveHistory(state.moves);
   navBackBtn.classList.remove('hidden');
   navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
-  renderMoveList([]);
+  renderMoveList(state.moves);
+  if (state.moves.length > 0) highlightMoveInList(state.moves.length - 1);
   updateCapturedPieces(state.fen);
   refreshGameList();
+  // Run coach/eval analysis for opening moves (same logic as loadGame)
+  if (state.moves.length > 0) {
+    let playerLastMoveIdx = -1;
+    for (let i = state.moves.length - 1; i >= 0; i--) {
+      if ((i % 2 === 0) === (currentPlayerColor === 'w' || currentPlayerColor === null)) {
+        playerLastMoveIdx = i; break;
+      }
+    }
+    if (playerLastMoveIdx >= 0) {
+      const playerLastMove = state.moves[playerLastMoveIdx];
+      const analysisPrevFen = playerLastMoveIdx === 0 ? INITIAL_FEN : state.moves[playerLastMoveIdx - 1].fenAfter;
+      runCoachAnalysis(playerLastMove.fenAfter, analysisPrevFen, playerLastMove.san)
+        .then(() => { if (playerLastMove.fenAfter !== state.fen) return refreshEvalBar(state.fen); })
+        .catch(() => {});
+    } else {
+      refreshEvalBar(state.fen).catch(() => {});
+    }
+    if (state.mode === 'vs_computer' && state.moves.length >= 2) {
+      const lastMove = state.moves[state.moves.length - 1];
+      const prevFen  = state.moves[state.moves.length - 2].fenAfter;
+      runOpponentAnalysis(state.fen, prevFen, lastMove.san).catch(() => {});
+    }
+  }
   if (state.mode === 'multiplayer') {
     connectToGame(state.gameId, handleWsEvent);
   }
@@ -369,6 +414,7 @@ async function loadGame(gameId: string): Promise<void> {
   navFwdBtn.classList.remove('hidden');
   updateStatus(state.status, state.turn, state.mode, state.computerLevel, state.waitingForOpponent);
   renderMoveList(state.moves);
+  highlightMoveInList(state.moves.length - 1);
   updateCapturedPieces(state.fen);
   // Find player's last move index for quality analysis
   let playerLastMoveIdx = -1;
@@ -415,7 +461,7 @@ async function handleWsEvent(event: { type: string; gameId: string }): Promise<v
     }
     if (!active) {
       playGameOver();
-      showOverlay(state.status);
+      showOverlay(state.status, state.moves);
     }
     refreshGameList();
   }
@@ -455,7 +501,7 @@ async function handleMove(from: string, to: string): Promise<void> {
     if (!['active', 'check'].includes(result.status)) {
       gameIsActive = false;
       playGameOver();
-      showOverlay(result.status);
+      showOverlay(result.status, state.moves);
     } else if (result.status === 'check') {
       playCheck();
     }
@@ -510,13 +556,18 @@ function updateStatus(status: string, turn: string, mode: api.GameMode, level: n
   }
 
   const isComputer = mode === 'vs_computer';
-  const turnLabel = turn === 'w'
-    ? (isComputer ? 'Your turn' : 'White to move')
-    : (isComputer ? `AI (${LEVELS[level ?? 5]})` : 'Black to move');
+  const isPlayerTurn = isComputer && currentPlayerColor !== null
+    ? currentPlayerColor === turn
+    : turn === 'w';
+  const turnLabel = isComputer
+    ? (isPlayerTurn ? 'Your turn' : `AI (${LEVELS[level ?? 5]})`)
+    : (turn === 'w' ? 'White to move' : 'Black to move');
 
   const statusMap: Record<string, string> = {
     active: turnLabel,
-    check: isComputer && turn === 'w' ? 'You are in check' : isComputer ? 'AI is in check' : `${turn === 'w' ? 'White' : 'Black'} is in check`,
+    check: isComputer
+      ? (isPlayerTurn ? 'You are in check' : 'AI is in check')
+      : `${turn === 'w' ? 'White' : 'Black'} is in check`,
     checkmate: 'Checkmate!',
     stalemate: 'Stalemate — draw',
     draw: 'Draw',
@@ -666,10 +717,54 @@ let pvModeRestoreLastMove: { from: string; to: string } | null = null;
 let pvModeBtn: HTMLButtonElement | null = null;
 let pvModeAutoTimer: ReturnType<typeof setTimeout> | null = null;
 let pvTempRows: HTMLElement[] = [];
+let pvModeTextSpans: HTMLElement[] = [];
+let pvModeTextEl: HTMLElement | null = null;
 
 function clearPvTempRows(): void {
   pvTempRows.forEach(r => r.remove());
   pvTempRows = [];
+}
+
+function highlightLastPvMove(): void {
+  // Highlight current move in move list
+  pvTempRows.forEach(r => r.querySelectorAll('.move-san').forEach(c => c.classList.remove('pv-active')));
+  const lastRow = pvTempRows[pvTempRows.length - 1];
+  if (lastRow) {
+    const cells = lastRow.querySelectorAll('.move-san');
+    const active = Array.from(cells).filter(c => c.textContent).pop();
+    active?.classList.add('pv-active');
+  }
+  // Highlight current move in PV text line
+  pvModeTextSpans.forEach(s => s.classList.remove('pv-active'));
+  if (pvModeIndex >= 0 && pvModeIndex < pvModeTextSpans.length) {
+    pvModeTextSpans[pvModeIndex].classList.add('pv-active');
+  }
+}
+
+function renderPvText(
+  el: HTMLElement,
+  positions: Array<{ san: string }>,
+  startMoveNum: number,
+  startWhite: boolean,
+): HTMLElement[] {
+  el.textContent = '';
+  const spans: HTMLElement[] = [];
+  let moveNum = startMoveNum;
+  let isWhite = startWhite;
+  for (const pos of positions) {
+    const span = document.createElement('span');
+    span.className = 'pv-move-span';
+    span.textContent = isWhite ? `${moveNum}.\u00a0${pos.san} ` : `${pos.san} `;
+    if (!isWhite) {
+      // prefix black move with move number if it's the very first token
+      if (spans.length === 0) span.textContent = `${moveNum}…\u00a0${pos.san} `;
+      moveNum++;
+    }
+    isWhite = !isWhite;
+    el.appendChild(span);
+    spans.push(span);
+  }
+  return spans;
 }
 
 function addPvMoveToList(san: string, moveNum: number, isWhite: boolean): void {
@@ -725,6 +820,7 @@ function navigatePv(index: number): void {
   board!.setFen(pos.fen, false, isFlipped(), { from: pos.from, to: pos.to });
   refreshEvalBar(pos.fen).catch(() => {});
   renderPvHistory(clamped);
+  highlightLastPvMove();
   updateNavButtons();
 }
 
@@ -744,6 +840,10 @@ function exitPvMode(): void {
     const capturedBtn = pvModeBtn;
     pvModeBtn.onclick = () => enterPvMode(capturedPositions, capturedStartMoveNum, capturedStartWhite, capturedBtn);
   }
+  // Reset text span highlights
+  pvModeTextSpans.forEach(s => s.classList.remove('pv-active'));
+  pvModeTextSpans = [];
+  pvModeTextEl = null;
   updateNavButtons();
 }
 
@@ -752,6 +852,7 @@ function enterPvMode(
   startMoveNum: number,
   startWhite: boolean,
   btn: HTMLButtonElement,
+  textEl?: HTMLElement,
 ): void {
   if (pvMode && pvModeBtn === btn) { exitPvMode(); return; }
   if (pvMode) exitPvMode();
@@ -767,6 +868,8 @@ function enterPvMode(
     ? { from: moveRecords[viewIndex - 1].from, to: moveRecords[viewIndex - 1].to }
     : null;
   pvModeBtn = btn;
+  pvModeTextEl = textEl ?? null;
+  pvModeTextSpans = textEl ? Array.from(textEl.querySelectorAll('.pv-move-span')) as HTMLElement[] : [];
   btn.classList.add('playing');
   btn.textContent = '■';
   btn.onclick = () => exitPvMode();
@@ -783,6 +886,7 @@ function enterPvMode(
     board!.setFen(pos.fen, false, isFlipped(), { from: pos.from, to: pos.to });
     refreshEvalBar(pos.fen).catch(() => {});
     addPvMoveToList(pos.san, moveNum, isWhite);
+    highlightLastPvMove();
     if (!isWhite) moveNum++;
     isWhite = !isWhite;
     updateNavButtons();
@@ -796,8 +900,9 @@ function bindPvPlayBtn(
   getPositions: () => Array<{ fen: string; from: string; to: string; san: string }>,
   getStartMoveNum: () => number,
   getStartWhite: () => boolean,
+  textEl?: HTMLElement,
 ): void {
-  btn.onclick = () => enterPvMode(getPositions(), getStartMoveNum(), getStartWhite(), btn);
+  btn.onclick = () => enterPvMode(getPositions(), getStartMoveNum(), getStartWhite(), btn, textEl);
 }
 
 const QUALITY_LABELS: Record<string, string> = {
@@ -826,6 +931,10 @@ function showCoachPanel(): void {
   coachOppQualityEl.className = '';
   coachOppSanEl.textContent = '—';
   coachOppBestSanEl.textContent = '—';
+  coachAskRowEl.classList.add('hidden');
+  coachMsgRowEl.classList.add('hidden');
+  coachOppAskRowEl.classList.add('hidden');
+  coachOppMsgRowEl.classList.add('hidden');
   undoBtnEl.disabled = true;
 }
 
@@ -905,22 +1014,50 @@ async function runCoachAnalysis(fen: string, previousFen?: string, playerMoveSan
       bestPlayBtnEl.classList.add('hidden');
     }
 
-    // LLM coaching message
-    coachMsgEl.textContent = result.coachMessage;
-    coachMsgRowEl.classList.toggle('hidden', !result.coachMessage);
+    // Show "Ask coach" button — message loads on demand
+    coachMsgEl.textContent = '';
+    coachMsgRowEl.classList.add('hidden');
     coachSpeakBtn.classList.remove('speaking');
+    coachAskRowEl.classList.remove('hidden');
+    coachAskBtn.disabled = false;
+    coachAskBtn.textContent = 'Ask coach';
+    coachAskBtn.onclick = async () => {
+      coachAskBtn.disabled = true;
+      coachAskBtn.textContent = '…';
+      try {
+        const msg = await api.requestCoachMessage({
+          playerMoveSan: result.moveQuality ? (playerMoveSan ?? null) : null,
+          moveQuality: result.moveQuality,
+          evalDropCp: result.evalDropCp,
+          scoreCp: result.scoreCp ?? 0,
+          bestMoveSan: result.bestMoveSan,
+          mateIn: result.mateIn,
+          alternatives: result.alternatives,
+          pv: result.pv,
+          isOpponent: false,
+          openingName: currentOpeningMatch?.opening.name ?? null,
+          openingEco: currentOpeningMatch?.line.eco ?? null,
+        });
+        coachMsgEl.textContent = msg;
+        coachMsgRowEl.classList.toggle('hidden', !msg);
+        coachAskRowEl.classList.add('hidden');
+      } catch {
+        coachAskBtn.textContent = 'Ask coach';
+        coachAskBtn.disabled = false;
+      }
+    };
 
     // Alternatives
     renderAlternatives(coachAltsEl, result.alternatives, result.scoreCp);
 
     // PV
     if (result.pv) {
-      coachPvTextEl.textContent = result.pv;
-      coachPvEl.classList.remove('hidden');
       const positions = result.pvPositions ?? [];
       const startMoveNum = result.pvStartMoveNum ?? 1;
       const startWhite = result.pvStartWhite ?? true;
-      bindPvPlayBtn(coachPvPlayBtn, () => positions, () => startMoveNum, () => startWhite);
+      renderPvText(coachPvTextEl, positions, startMoveNum, startWhite);
+      coachPvEl.classList.remove('hidden');
+      bindPvPlayBtn(coachPvPlayBtn, () => positions, () => startMoveNum, () => startWhite, coachPvTextEl);
       coachPvPlayBtn.style.display = positions.length ? '' : 'none';
     }
   } catch {
@@ -942,22 +1079,50 @@ async function runOpponentAnalysis(fen: string, previousFen: string, oppMoveSan:
     }
     coachOppBestSanEl.textContent = result.bestMoveSan ?? result.bestMove;
 
-    // LLM coaching message
-    coachOppMsgEl.textContent = result.coachMessage;
-    coachOppMsgRowEl.classList.toggle('hidden', !result.coachMessage);
+    // Show "Ask coach" button — message loads on demand
+    coachOppMsgEl.textContent = '';
+    coachOppMsgRowEl.classList.add('hidden');
     coachOppSpeakBtn.classList.remove('speaking');
+    coachOppAskRowEl.classList.remove('hidden');
+    coachOppAskBtn.disabled = false;
+    coachOppAskBtn.textContent = 'Ask coach';
+    coachOppAskBtn.onclick = async () => {
+      coachOppAskBtn.disabled = true;
+      coachOppAskBtn.textContent = '…';
+      try {
+        const msg = await api.requestCoachMessage({
+          playerMoveSan: result.moveQuality ? (oppMoveSan ?? null) : null,
+          moveQuality: result.moveQuality,
+          evalDropCp: result.evalDropCp,
+          scoreCp: result.scoreCp ?? 0,
+          bestMoveSan: result.bestMoveSan,
+          mateIn: result.mateIn,
+          alternatives: result.alternatives,
+          pv: result.pv,
+          isOpponent: true,
+          openingName: currentOpeningMatch?.opening.name ?? null,
+          openingEco: currentOpeningMatch?.line.eco ?? null,
+        });
+        coachOppMsgEl.textContent = msg;
+        coachOppMsgRowEl.classList.toggle('hidden', !msg);
+        coachOppAskRowEl.classList.add('hidden');
+      } catch {
+        coachOppAskBtn.textContent = 'Ask coach';
+        coachOppAskBtn.disabled = false;
+      }
+    };
 
     // Alternatives
     renderAlternatives(coachOppAltsEl, result.alternatives, result.scoreCp);
 
     // PV
     if (result.pv) {
-      coachOppPvTextEl.textContent = result.pv;
-      coachOppPvEl.classList.remove('hidden');
       const positions = result.pvPositions ?? [];
       const startMoveNum = result.pvStartMoveNum ?? 1;
       const startWhite = result.pvStartWhite ?? true;
-      bindPvPlayBtn(coachOppPvPlayBtn, () => positions, () => startMoveNum, () => startWhite);
+      renderPvText(coachOppPvTextEl, positions, startMoveNum, startWhite);
+      coachOppPvEl.classList.remove('hidden');
+      bindPvPlayBtn(coachOppPvPlayBtn, () => positions, () => startMoveNum, () => startWhite, coachOppPvTextEl);
       coachOppPvPlayBtn.style.display = positions.length ? '' : 'none';
     }
   } catch { /* keep —  */ }
@@ -970,6 +1135,19 @@ function setMoveHistory(moves: api.MoveRecord[]): void {
   moveRecords = moves;
   viewIndex = moveHistory.length - 1;
   updateNavButtons();
+  updateOpeningLabel(moves);
+}
+
+let currentOpeningMatch: ReturnType<typeof detectOpening> = null;
+
+function updateOpeningLabel(moves: api.MoveRecord[]): void {
+  currentOpeningMatch = moves.length ? detectOpening(moves.map(m => m.san)) : null;
+  if (currentOpeningMatch) {
+    openingLabelEl.textContent = `${currentOpeningMatch.line.eco} · ${currentOpeningMatch.opening.name}`;
+    openingLabelEl.classList.remove('hidden');
+  } else {
+    openingLabelEl.classList.add('hidden');
+  }
 }
 
 function updateNavButtons(): void {
@@ -979,6 +1157,13 @@ function updateNavButtons(): void {
   } else {
     navBackBtn.disabled = viewIndex <= 0;
     navFwdBtn.disabled = viewIndex >= moveHistory.length - 1;
+  }
+  // Show "Play from here" only when viewing a past position in an active vs_computer game
+  const isPastPosition = viewIndex < moveHistory.length - 1;
+  if (gameIsActive && currentMode === 'vs_computer' && isPastPosition) {
+    playFromBtn.classList.remove('hidden');
+  } else {
+    playFromBtn.classList.add('hidden');
   }
 }
 
@@ -1097,7 +1282,9 @@ function updateCapturedPieces(fen: string): void {
   capturedPiecesEl.classList.toggle('hidden', !hasAny);
 }
 
-function showOverlay(status: string): void {
+let overlayOpeningMatch: ReturnType<typeof detectOpening> = null;
+
+function showOverlay(status: string, moves?: api.MoveRecord[]): void {
   const messages: Record<string, string> = {
     checkmate: 'Checkmate!',
     stalemate: "Stalemate — it's a draw",
@@ -1106,6 +1293,23 @@ function showOverlay(status: string): void {
   };
   overlayMsg.textContent = messages[status] ?? 'Game over';
   overlayNewGame.textContent = 'Quit';
+
+  overlayOpeningMatch = moves?.length ? detectOpening(moves.map(m => m.san)) : null;
+  if (overlayOpeningMatch) {
+    const { opening, line, matchedPlies, deviated, completed } = overlayOpeningMatch;
+    if (completed) {
+      overlayOpeningText.textContent = `Du spelade hela ${line.name} (${opening.name}) enligt teorin!`;
+    } else if (deviated) {
+      const moveNumber = Math.ceil((matchedPlies + 1) / 2);
+      overlayOpeningText.textContent = `Du spelade ${opening.name} — avvek från ${line.name} på drag ${moveNumber}.`;
+    } else {
+      overlayOpeningText.textContent = `Du spelade ${opening.name} (${line.name}).`;
+    }
+    overlayOpeningEl.classList.remove('hidden');
+  } else {
+    overlayOpeningEl.classList.add('hidden');
+  }
+
   overlayEl.classList.remove('hidden');
 }
 
@@ -1121,6 +1325,7 @@ function returnToStart(): void {
   currentPlayerColor = null;
   board = null;
   overlayEl.classList.add('hidden');
+  openingLabelEl.classList.add('hidden');
   boardEl.parentElement!.classList.add('empty');
   resignBtn.classList.add('hidden');
   newGameBtn.classList.remove('hidden');
@@ -1287,11 +1492,38 @@ activeFilterBtn.addEventListener('click', () => {
 
 newGameBtn.addEventListener('click', startNewGame);
 overlayNewGame.addEventListener('click', returnToStart);
+overlayOpeningBtn.addEventListener('click', () => {
+  if (!overlayOpeningMatch) return;
+  const { opening, line } = overlayOpeningMatch;
+  returnToStart();
+  openTraining();
+  startTrainingLine(opening, line);
+});
 resignBtn.addEventListener('click', async () => {
   if (!currentGameId) return;
   await api.resignGame(currentGameId);
-  showOverlay('resigned');
+  const state = await api.getGame(currentGameId);
+  showOverlay('resigned', state.moves);
   refreshGameList();
+});
+
+playFromBtn.addEventListener('click', async () => {
+  if (!currentGameId) return;
+  playFromBtn.disabled = true;
+  try {
+    const state = await api.truncateMoves(currentGameId, viewIndex);
+    setMoveHistory(state.moves);
+    board!.setFen(state.fen, true, isFlipped(), lastMoveOf(state.moves));
+    updateStatus(state.status, state.turn, state.mode, state.computerLevel);
+    renderMoveList(state.moves);
+    updateCapturedPieces(state.fen);
+    showCoachPanel();
+    refreshGameList();
+  } catch (err: any) {
+    statusEl.textContent = err.message;
+  } finally {
+    playFromBtn.disabled = false;
+  }
 });
 
 undoBtnEl.addEventListener('click', async () => {
@@ -1670,5 +1902,614 @@ profileModalEl.addEventListener('click', (e) => {
   const p = loadUserProfile();
   applyAvatarToCard(p.piece, p.color);
 })();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TRAINING
+// ─────────────────────────────────────────────────────────────────────────────
+
+const trainingOverlayEl     = document.getElementById('training-overlay')!;
+const trainingLibraryEl     = document.getElementById('training-library')!;
+const trainingLibToggleBtn  = document.getElementById('training-lib-toggle-btn') as HTMLButtonElement;
+const trainingInfoEl        = document.getElementById('training-info')!;
+const trainingInfoHandleEl  = document.getElementById('training-info-handle')!;
+const trainingExploreCounterEl     = document.getElementById('training-explore-counter') as HTMLButtonElement;
+const trainingExploreCounterTextEl = document.getElementById('training-explore-counter-text')!;
+const trainingLibScrollEl   = document.getElementById('training-lib-scroll')!;
+const trainingSearchEl      = document.getElementById('training-search') as HTMLInputElement;
+const trainingInfoContentEl = document.getElementById('training-info-content')!;
+const trainingActionsEl     = document.getElementById('training-actions') as HTMLElement;
+const trainingHintBtn       = document.getElementById('training-hint-btn') as HTMLButtonElement;
+const trainingHintAlways    = document.getElementById('training-hint-always') as HTMLInputElement;
+const trainingAutoOpponent  = document.getElementById('training-auto-opponent') as HTMLInputElement;
+const trainingRetryBtn      = document.getElementById('training-retry-btn') as HTMLButtonElement;
+const tstatDotEl            = document.getElementById('tstat-dot')!;
+const tstatTextEl           = document.getElementById('tstat-text')!;
+const tstatProgressEl       = document.getElementById('tstat-progress')!;
+const trainingDotsEl        = document.getElementById('training-dots')!;
+const trainingBoardEl       = document.getElementById('training-board')!;
+const trainingCompleteBanner = document.getElementById('training-complete-banner')!;
+const tcbTitleEl            = document.getElementById('tcb-title')!;
+const tcbSubEl              = document.getElementById('tcb-sub')!;
+const tcbContinueBtn        = document.getElementById('tcb-continue-btn') as HTMLButtonElement;
+const tcbRetryBtn           = document.getElementById('tcb-retry-btn') as HTMLButtonElement;
+const trainingCloseBtn      = document.getElementById('training-close-btn') as HTMLButtonElement;
+
+let trainingBoard: Board | null = null;
+let trainingSession: TrainingSession | OpeningExploreSession | GlobalExploreSession | null = null;
+let globalExploreActiveLineIds: Set<string> | null = null;
+let globalExplorePlayerSide: 'white' | 'black' = 'white';
+let trainingSelectedOpening: Opening | null = null;
+let trainingSelectedLine: OpeningLine | null = null;
+let trainingOpeningMoves: { from: string; to: string }[] = [];
+
+function openTraining(): void {
+  trainingOverlayEl.classList.remove('hidden');
+  if (!trainingBoard) {
+    trainingBoard = new Board(trainingBoardEl, (_from, _to) => {
+      // moves are intercepted via the session callback wired below
+    });
+  }
+  startGlobalExplore();
+}
+
+function startGlobalExplore(side?: 'white' | 'black'): void {
+  if (side) globalExplorePlayerSide = side;
+  trainingSelectedOpening = null;
+  trainingSelectedLine = null;
+  trainingCompleteBanner.classList.remove('show');
+  trainingActionsEl.style.display = '';
+  trainingInfoContentEl.innerHTML = `
+    <div class="tinfo-opening-name" style="color:#8ab870">Utforska öppningar</div>
+    <div class="tinfo-color-picker">
+      <button class="tinfo-color-btn${globalExplorePlayerSide === 'white' ? ' active' : ''}" id="tinfo-color-white">♔ Vit</button>
+      <button class="tinfo-color-btn${globalExplorePlayerSide === 'black' ? ' active' : ''}" id="tinfo-color-black">♚ Svart</button>
+    </div>
+    <div class="tinfo-desc">
+      ${globalExplorePlayerSide === 'white'
+        ? 'Gör ett drag för att börja. Listan filtreras och visar vilka öppningar som fortfarande är möjliga.'
+        : 'Motståndaren gör det första draget. Svara och listan filtreras efter varje drag.'}
+    </div>
+    <div id="tinfo-feedback" class="tinfo-feedback"></div>
+  `;
+  document.getElementById('tinfo-color-white')?.addEventListener('click', () => startGlobalExplore('white'));
+  document.getElementById('tinfo-color-black')?.addEventListener('click', () => startGlobalExplore('black'));
+
+  trainingSession?.destroy();
+  trainingSession = new GlobalExploreSession(OPENINGS, globalExplorePlayerSide, {
+    onRender(fen, lastFrom, lastTo) {
+      const lm = lastFrom && lastTo ? { from: lastFrom, to: lastTo } : null;
+      trainingBoard!.setFen(fen, false, globalExplorePlayerSide === 'black', lm);
+    },
+    onStatus(type, text) {
+      tstatDotEl.className = 'tstat-dot ' + type;
+      tstatTextEl.textContent = text;
+      trainingBoard!.setInteractive(type === 'you' || type === 'err');
+      if (type === 'you' && trainingHintAlways.checked) {
+        setTimeout(() => trainingSession?.showHint(), 0);
+      }
+    },
+    onFeedback(type, text) {
+      const fb = document.getElementById('tinfo-feedback');
+      if (!fb) return;
+      fb.className = 'tinfo-feedback' + (type ? ' ' + type : '');
+      fb.textContent = text;
+    },
+    onProgress() {},
+    onVariantName() {},
+    onHint(fromSq, toSq) {
+      document.querySelectorAll('.square.training-hint-from, .square.training-hint-to').forEach(el => {
+        el.classList.remove('training-hint-from', 'training-hint-to');
+      });
+      document.querySelector(`#training-board [data-sq="${fromSq}"]`)?.classList.add('training-hint-from');
+      document.querySelector(`#training-board [data-sq="${toSq}"]`)?.classList.add('training-hint-to');
+    },
+    onComplete() {},
+    onMatchingLineIds(ids) {
+      globalExploreActiveLineIds = new Set(ids);
+      renderTrainingLibrary(trainingSearchEl.value);
+
+      // If all remaining lines belong to a single opening, show its info panel
+      const idSet = new Set(ids);
+      const matchingOpenings = OPENINGS.filter(op => op.lines.some(l => idSet.has(l.id)));
+      if (matchingOpenings.length === 1 && matchingOpenings[0] !== trainingSelectedOpening) {
+        trainingSelectedOpening = matchingOpenings[0];
+        renderTrainingInfoPanelExplore(matchingOpenings[0]);
+      }
+      updateExploreCounter(matchingOpenings.length);
+    },
+    onAutoSelected(lineId) {
+      // Find opening + line
+      let foundOpening: Opening | null = null;
+      let foundLine: OpeningLine | null = null;
+      for (const op of OPENINGS) {
+        const line = op.lines.find(l => l.id === lineId);
+        if (line) { foundOpening = op; foundLine = line; break; }
+      }
+      if (!foundOpening || !foundLine) return;
+
+      // Grab current position from the global session before replacing it
+      const globalSession = trainingSession as GlobalExploreSession;
+      const currentFen = globalSession.getCurrentFen();
+      const currentMoveIndex = globalSession.getCurrentMoveIndex();
+
+      // Switch to TrainingSession without restarting — continue from current position
+      globalExploreActiveLineIds = null;
+      trainingSelectedOpening = foundOpening;
+      trainingSelectedLine = foundLine;
+      trainingExploreCounterEl.classList.add('hidden');
+      renderTrainingLibrary();
+      renderTrainingInfoPanel(foundOpening, foundLine);
+
+      // Flash variant name to signal auto-detection
+      const el = document.getElementById('tinfo-variant-name');
+      if (el) {
+        el.classList.remove('variant-flash');
+        void (el as HTMLElement).offsetWidth;
+        el.classList.add('variant-flash');
+      }
+
+      const newSession = new TrainingSession(foundOpening, foundLine, {
+        onRender(fen, lastFrom, lastTo) {
+          const lm = lastFrom && lastTo ? { from: lastFrom, to: lastTo } : null;
+          trainingBoard!.setFen(fen, false, foundOpening!.side === 'black', lm);
+        },
+        onStatus(type, text) {
+          tstatDotEl.className = 'tstat-dot ' + type;
+          tstatTextEl.textContent = text;
+          trainingBoard!.setInteractive(type === 'you' || type === 'err');
+          if (type === 'you' && trainingHintAlways.checked) {
+            setTimeout(() => trainingSession?.showHint(), 0);
+          }
+        },
+        onFeedback(type, text) {
+          const fb = document.getElementById('tinfo-feedback');
+          if (!fb) return;
+          fb.className = 'tinfo-feedback' + (type ? ' ' + type : '');
+          fb.textContent = text;
+        },
+        onProgress(played, total) {
+          tstatProgressEl.textContent = played ? `${played} / ${total} drag` : '';
+          trainingDotsEl.innerHTML = '';
+          for (let i = 0; i < total; i++) {
+            const dot = document.createElement('div');
+            dot.className = 'tdot' + (i < played ? ' done' : i === played ? ' current' : '');
+            trainingDotsEl.appendChild(dot);
+          }
+          document.querySelectorAll<HTMLElement>('.tinfo-mv').forEach((el, i) => {
+            el.className = 'tinfo-mv' + (i < played ? ' done' : i === played ? ' current' : '');
+          });
+        },
+        onVariantName(name) {
+          const el = document.getElementById('tinfo-variant-name');
+          if (el) el.textContent = name;
+        },
+        onHint(fromSq, toSq) {
+          document.querySelectorAll('.square.training-hint-from, .square.training-hint-to').forEach(el => {
+            el.classList.remove('training-hint-from', 'training-hint-to');
+          });
+          document.querySelector(`#training-board [data-sq="${fromSq}"]`)?.classList.add('training-hint-from');
+          document.querySelector(`#training-board [data-sq="${toSq}"]`)?.classList.add('training-hint-to');
+        },
+        onComplete(moves) {
+          trainingOpeningMoves = moves;
+          trainingCompleteBanner.classList.add('show');
+          tcbTitleEl.textContent = `${foundLine!.name} — klar!`;
+          tcbSubEl.textContent = `Du spelade igenom hela varianten! Fortsätt från denna ställning mot AI.`;
+        },
+      });
+
+      globalSession.destroy();
+      trainingSession = newSession;
+      (trainingBoard as any).onMove = (from: string, to: string) => {
+        trainingSession?.onSquareClick(from, to);
+      };
+      newSession.startFrom(currentMoveIndex, currentFen);
+    },
+  });
+
+  (trainingBoard as any).onMove = (from: string, to: string) => {
+    trainingSession?.onSquareClick(from, to);
+  };
+
+  globalExploreActiveLineIds = null;  // show all initially
+  renderTrainingLibrary();
+  trainingSession.setAutoOpponent(trainingAutoOpponent.checked);
+  trainingSession.start();
+}
+
+function updateExploreCounter(openingCount: number): void {
+  if (openingCount > 0) {
+    trainingExploreCounterTextEl.textContent = openingCount === 1
+      ? '🔍 1 möjlig öppning'
+      : `🔍 ${openingCount} möjliga öppningar`;
+    trainingExploreCounterEl.classList.remove('hidden');
+  } else {
+    trainingExploreCounterEl.classList.add('hidden');
+  }
+}
+
+function closeTraining(): void {
+  trainingOverlayEl.classList.add('hidden');
+  trainingSession?.destroy();
+  trainingSession = null;
+  globalExploreActiveLineIds = null;
+  trainingLibraryEl.classList.remove('mobile-open');
+  trainingInfoEl.classList.remove('mobile-expanded');
+  trainingExploreCounterEl.classList.add('hidden');
+}
+
+function renderTrainingLibrary(filter = ''): void {
+  const active = globalExploreActiveLineIds; // null = no filter active (show all)
+  trainingLibScrollEl.innerHTML = '';
+  const cats: { id: string; label: string }[] = [
+    { id: 'e4', label: 'e4 — Öppna spel' },
+    { id: 'd4', label: 'd4 — Slutna spel' },
+    { id: 'other', label: 'Annat' },
+  ];
+  for (const cat of cats) {
+    const openings = OPENINGS.filter(o =>
+      o.category === cat.id &&
+      (!filter || o.name.toLowerCase().includes(filter.toLowerCase()) ||
+        o.lines.some(l => l.name.toLowerCase().includes(filter.toLowerCase())))
+    );
+    if (!openings.length) continue;
+
+    // In global explore mode, skip categories where no lines match
+    if (active && !openings.some(o => o.lines.some(l => active.has(l.id)))) continue;
+
+    const catEl = document.createElement('div');
+    catEl.className = 'tlib-cat';
+    catEl.textContent = cat.label;
+    trainingLibScrollEl.appendChild(catEl);
+
+    for (const op of openings) {
+      // In global explore mode, skip openings with no matching lines
+      if (active && !op.lines.some(l => active.has(l.id))) continue;
+
+      if (op.lines.length === 1) {
+        // single-line opening — show as flat item
+        const isEliminated = active !== null && !active.has(op.lines[0].id);
+        const item = document.createElement('div');
+        item.className = 'tlib-item' + (trainingSelectedLine?.id === op.lines[0].id ? ' active' : '') + (isEliminated ? ' tlib-eliminated' : '');
+        item.innerHTML = `
+          <div class="tlib-side ${op.side === 'white' ? 'tlib-side-w' : 'tlib-side-b'}"></div>
+          <div class="tlib-item-name">${op.name}</div>
+          <div class="tlib-item-eco">${op.eco}</div>
+        `;
+        item.addEventListener('click', () => startTrainingLine(op, op.lines[0]));
+        trainingLibScrollEl.appendChild(item);
+      } else {
+        // multi-line opening — collapsible group
+        const isExpanded = trainingSelectedOpening?.id === op.id || (active !== null);
+        const group = document.createElement('div');
+        group.className = 'tlib-group';
+
+        const hdr = document.createElement('div');
+        hdr.className = 'tlib-group-hdr' + (isExpanded ? ' active' : '');
+        hdr.innerHTML = `
+          <div class="tlib-side ${op.side === 'white' ? 'tlib-side-w' : 'tlib-side-b'}"></div>
+          <div class="tlib-group-name">${op.name}</div>
+          <div class="tlib-group-eco">${op.eco}</div>
+          <div class="tlib-arrow ${isExpanded ? 'open' : ''}">▶</div>
+        `;
+
+        const variantsEl = document.createElement('div');
+        variantsEl.className = 'tlib-variants' + (isExpanded ? ' open' : '');
+
+        // "All variants" explore option — hide in global explore mode
+        if (!active) {
+          const explore = document.createElement('div');
+          const isExploreActive = trainingSelectedOpening?.id === op.id && trainingSelectedLine === null;
+          explore.className = 'tlib-variant tlib-variant-explore' + (isExploreActive ? ' active' : '');
+          explore.innerHTML = `<span style="flex:1;font-size:0.74rem">🎲 Alla varianter</span>`;
+          explore.addEventListener('click', () => startOpeningExplore(op));
+          variantsEl.appendChild(explore);
+        }
+
+        for (const line of op.lines) {
+          if (filter && !line.name.toLowerCase().includes(filter.toLowerCase()) && !op.name.toLowerCase().includes(filter.toLowerCase())) continue;
+          const isEliminated = active !== null && !active.has(line.id);
+          const v = document.createElement('div');
+          v.className = 'tlib-variant' + (trainingSelectedLine?.id === line.id ? ' active' : '') + (isEliminated ? ' tlib-eliminated' : '');
+          v.innerHTML = `
+            <span style="flex:1;font-size:0.74rem">${line.name}</span>
+            <span class="tlib-variant-eco">${line.eco}</span>
+          `;
+          v.addEventListener('click', () => startTrainingLine(op, line));
+          variantsEl.appendChild(v);
+        }
+
+        hdr.addEventListener('click', () => {
+          const arrow = hdr.querySelector('.tlib-arrow')!;
+          const open = variantsEl.classList.toggle('open');
+          arrow.classList.toggle('open', open);
+          hdr.classList.toggle('active', open);
+        });
+
+        group.appendChild(hdr);
+        group.appendChild(variantsEl);
+        trainingLibScrollEl.appendChild(group);
+      }
+    }
+  }
+}
+
+function startTrainingLine(opening: Opening, line: OpeningLine): void {
+  globalExploreActiveLineIds = null;
+  trainingSelectedOpening = opening;
+  trainingSelectedLine = line;
+  trainingCompleteBanner.classList.remove('show');
+  trainingActionsEl.style.display = '';
+  trainingExploreCounterEl.classList.add('hidden');
+  renderTrainingLibrary();
+  renderTrainingInfoPanel(opening, line);
+
+  trainingSession?.destroy();
+  trainingSession = new TrainingSession(opening, line, {
+    onRender(fen, lastFrom, lastTo) {
+      const lm = lastFrom && lastTo ? { from: lastFrom, to: lastTo } : null;
+      trainingBoard!.setFen(fen, false, opening.side === 'black', lm);
+    },
+    onStatus(type, text) {
+      tstatDotEl.className = 'tstat-dot ' + type;
+      tstatTextEl.textContent = text;
+      trainingBoard!.setInteractive(type === 'you' || type === 'err');
+      if (type === 'you' && trainingHintAlways.checked) {
+        setTimeout(() => trainingSession?.showHint(), 0);
+      }
+    },
+    onFeedback(type, text) {
+      const fb = document.getElementById('tinfo-feedback');
+      if (!fb) return;
+      fb.className = 'tinfo-feedback' + (type ? ' ' + type : '');
+      fb.textContent = text;
+    },
+    onProgress(played, total) {
+      tstatProgressEl.textContent = played ? `${played} / ${total} drag` : '';
+      // Update move dots
+      trainingDotsEl.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'tdot' + (i < played ? ' done' : i === played ? ' current' : '');
+        trainingDotsEl.appendChild(dot);
+      }
+      // Update move strip in info panel
+      document.querySelectorAll<HTMLElement>('.tinfo-mv').forEach((el, i) => {
+        el.className = 'tinfo-mv' + (i < played ? ' done' : i === played ? ' current' : '');
+      });
+    },
+    onVariantName(name) {
+      const el = document.getElementById('tinfo-variant-name');
+      if (el) el.textContent = name;
+    },
+    onHint(fromSq, toSq) {
+      // Highlight hint squares on the board
+      document.querySelectorAll('.square.training-hint-from, .square.training-hint-to').forEach(el => {
+        el.classList.remove('training-hint-from', 'training-hint-to');
+      });
+      document.querySelector(`#training-board [data-sq="${fromSq}"]`)?.classList.add('training-hint-from');
+      document.querySelector(`#training-board [data-sq="${toSq}"]`)?.classList.add('training-hint-to');
+    },
+    onComplete(moves) {
+      trainingOpeningMoves = moves;
+      trainingCompleteBanner.classList.add('show');
+      tcbTitleEl.textContent = `${line.name} — klar!`;
+      tcbSubEl.textContent = `Du spelade igenom hela varianten! Fortsätt från denna ställning mot AI.`;
+    },
+  });
+
+  // Wire up board clicks → session
+  (trainingBoard as any).onMove = (from: string, to: string) => {
+    trainingSession?.onSquareClick(from, to);
+  };
+
+  trainingSession.setAutoOpponent(trainingAutoOpponent.checked);
+  trainingSession.start();
+}
+
+function startOpeningExplore(opening: Opening): void {
+  globalExploreActiveLineIds = null;
+  trainingSelectedOpening = opening;
+  trainingSelectedLine = null;
+  trainingCompleteBanner.classList.remove('show');
+  trainingActionsEl.style.display = '';
+  renderTrainingLibrary();
+  renderTrainingInfoPanelExplore(opening);
+
+  trainingSession?.destroy();
+  trainingSession = new OpeningExploreSession(opening, {
+    onRender(fen, lastFrom, lastTo) {
+      const lm = lastFrom && lastTo ? { from: lastFrom, to: lastTo } : null;
+      trainingBoard!.setFen(fen, false, opening.side === 'black', lm);
+    },
+    onStatus(type, text) {
+      tstatDotEl.className = 'tstat-dot ' + type;
+      tstatTextEl.textContent = text;
+      trainingBoard!.setInteractive(type === 'you' || type === 'err');
+      if (type === 'you' && trainingHintAlways.checked) {
+        setTimeout(() => trainingSession?.showHint(), 0);
+      }
+    },
+    onFeedback(type, text) {
+      const fb = document.getElementById('tinfo-feedback');
+      if (!fb) return;
+      fb.className = 'tinfo-feedback' + (type ? ' ' + type : '');
+      fb.textContent = text;
+    },
+    onProgress(played, total) {
+      tstatProgressEl.textContent = played ? `${played} / ${total} drag` : '';
+      trainingDotsEl.innerHTML = '';
+      for (let i = 0; i < total; i++) {
+        const dot = document.createElement('div');
+        dot.className = 'tdot' + (i < played ? ' done' : i === played ? ' current' : '');
+        trainingDotsEl.appendChild(dot);
+      }
+    },
+    onVariantName(name) {
+      const el = document.getElementById('tinfo-variant-name');
+      if (el) el.textContent = name;
+    },
+    onVariantDetected(name) {
+      // Flash the variant name to signal the moment of determination
+      const el = document.getElementById('tinfo-variant-name');
+      if (el) {
+        el.classList.remove('variant-flash');
+        void (el as HTMLElement).offsetWidth; // reflow to restart animation
+        el.classList.add('variant-flash');
+      }
+      const fb = document.getElementById('tinfo-feedback');
+      if (fb) {
+        fb.className = 'tinfo-feedback branch';
+        fb.textContent = `★ Varianten avgjord: ${name}`;
+      }
+    },
+    onActiveLineIds(activeIds) {
+      document.querySelectorAll<HTMLElement>('.tinfo-explore-variants [data-line-id]').forEach(li => {
+        const isActive = activeIds.includes(li.dataset.lineId!);
+        li.classList.toggle('variant-eliminated', !isActive);
+      });
+    },
+    onHint(fromSq, toSq) {
+      document.querySelectorAll('.square.training-hint-from, .square.training-hint-to').forEach(el => {
+        el.classList.remove('training-hint-from', 'training-hint-to');
+      });
+      document.querySelector(`#training-board [data-sq="${fromSq}"]`)?.classList.add('training-hint-from');
+      document.querySelector(`#training-board [data-sq="${toSq}"]`)?.classList.add('training-hint-to');
+    },
+    onComplete(moves) {
+      trainingOpeningMoves = moves;
+      trainingCompleteBanner.classList.add('show');
+      const variantEl = document.getElementById('tinfo-variant-name');
+      const variantName = variantEl?.textContent ?? opening.name;
+      tcbTitleEl.textContent = `${variantName} — klar!`;
+      tcbSubEl.textContent = `Du spelade igenom hela varianten! Fortsätt från denna ställning mot AI.`;
+    },
+  });
+
+  (trainingBoard as any).onMove = (from: string, to: string) => {
+    trainingSession?.onSquareClick(from, to);
+  };
+
+  trainingSession.setAutoOpponent(trainingAutoOpponent.checked);
+  trainingSession.start();
+}
+
+function renderTrainingInfoPanel(opening: Opening, line: OpeningLine): void {
+  trainingInfoContentEl.innerHTML = `
+    <div>
+      <div class="tinfo-opening-name">${opening.name}</div>
+      <div class="tinfo-variant-name" id="tinfo-variant-name">${line.name}</div>
+    </div>
+    <div class="tinfo-side-badge">
+      <div class="tlib-side ${opening.side === 'white' ? 'tlib-side-w' : 'tlib-side-b'}" style="width:7px;height:7px;border-radius:50%"></div>
+      Du spelar som ${opening.side === 'white' ? 'Vit' : 'Svart'}
+    </div>
+    <div>
+      <div class="tinfo-section-label">Om öppningen</div>
+      <div class="tinfo-desc">${opening.description}</div>
+    </div>
+    <div>
+      <div class="tinfo-section-label">Drag i varianten</div>
+      <div class="tinfo-moves">
+        ${line.moves.map((m, i) => {
+          const num = i % 2 === 0 ? `<span style="color:#5a4030;font-size:0.62rem;margin-right:1px">${Math.floor(i/2)+1}.</span>` : '';
+          return `${num}<span class="tinfo-mv" data-mi="${i}">${m}</span>`;
+        }).join(' ')}
+      </div>
+    </div>
+    <div>
+      <div class="tinfo-section-label">Tips</div>
+      <ul class="tinfo-tips">
+        ${line.tips.map(t => `<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+    <div id="tinfo-feedback" class="tinfo-feedback"></div>
+  `;
+}
+
+function renderTrainingInfoPanelExplore(opening: Opening): void {
+  trainingInfoContentEl.innerHTML = `
+    <div>
+      <div class="tinfo-opening-name">${opening.name}</div>
+      <div class="tinfo-variant-name" id="tinfo-variant-name">Varianten avgörs…</div>
+    </div>
+    <div class="tinfo-side-badge">
+      <div class="tlib-side ${opening.side === 'white' ? 'tlib-side-w' : 'tlib-side-b'}" style="width:7px;height:7px;border-radius:50%"></div>
+      Du spelar som ${opening.side === 'white' ? 'Vit' : 'Svart'}
+    </div>
+    <div>
+      <div class="tinfo-section-label">Om öppningen</div>
+      <div class="tinfo-desc">${opening.description}</div>
+    </div>
+    <div>
+      <div class="tinfo-section-label">Möjliga varianter</div>
+      <ul class="tinfo-tips tinfo-explore-variants">
+        ${opening.lines.map(l => `<li data-line-id="${l.id}">${l.name}</li>`).join('')}
+      </ul>
+    </div>
+    <div id="tinfo-feedback" class="tinfo-feedback"></div>
+  `;
+}
+
+trainingBtn.addEventListener('click', openTraining);
+trainingCloseBtn.addEventListener('click', closeTraining);
+trainingSearchEl.addEventListener('input', () => renderTrainingLibrary(trainingSearchEl.value));
+trainingLibToggleBtn.addEventListener('click', () => trainingLibraryEl.classList.toggle('mobile-open'));
+trainingExploreCounterEl.addEventListener('click', () => trainingLibraryEl.classList.add('mobile-open'));
+trainingInfoHandleEl.addEventListener('click', () => trainingInfoEl.classList.toggle('mobile-expanded'));
+// Mobile: picking anything in the library closes the slide-in drawer automatically.
+trainingLibScrollEl.addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).closest('.tlib-item, .tlib-variant, .tlib-variant-explore')) {
+    trainingLibraryEl.classList.remove('mobile-open');
+  }
+});
+trainingHintBtn.addEventListener('click', () => trainingSession?.showHint());
+trainingAutoOpponent.addEventListener('change', () => {
+  trainingSession?.setAutoOpponent(trainingAutoOpponent.checked);
+});
+trainingRetryBtn.addEventListener('click', () => {
+  trainingCompleteBanner.classList.remove('show');
+  trainingSession?.reset();
+});
+tcbRetryBtn.addEventListener('click', () => {
+  trainingCompleteBanner.classList.remove('show');
+  trainingSession?.reset();
+});
+tcbContinueBtn.addEventListener('click', async () => {
+  if (!trainingOpeningMoves.length) return;
+  tcbContinueBtn.textContent = 'Startar…';
+  tcbContinueBtn.disabled = true;
+  try {
+    const me = await api.getMe();
+    if (!me.premium) {
+      closeTraining();
+      await showPaymentModal();
+      tcbContinueBtn.textContent = 'Fortsätt mot AI';
+      tcbContinueBtn.disabled = false;
+      return;
+    }
+    const level = await showLevelModal();
+    if (level === -1 || level === null) {
+      tcbContinueBtn.textContent = 'Fortsätt mot AI';
+      tcbContinueBtn.disabled = false;
+      if (level === null) {
+        closeTraining();
+        startNewGame();
+      }
+      return;
+    }
+    const opening = [...trainingOpeningMoves];
+    const side = trainingSelectedOpening?.side ?? 'white';
+    closeTraining();
+    tcbContinueBtn.textContent = 'Fortsätt mot AI';
+    tcbContinueBtn.disabled = false;
+    const state = await api.createGame('vs_computer', level, opening, side);
+    beginGame(state);
+  } catch (err) {
+    console.error('Failed to start training game:', err);
+    tcbContinueBtn.textContent = 'Fortsätt mot AI';
+    tcbContinueBtn.disabled = false;
+  }
+});
 
 boot();
