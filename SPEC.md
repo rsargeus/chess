@@ -463,16 +463,22 @@ The frontend WebSocket client reconnects automatically after 3s on disconnect. S
 
 ## Testing
 
+Three layers: backend unit/integration (Vitest), frontend unit (Vitest), and end-to-end (Playwright) covering full user flows against a real running app.
+
 ### Backend — Vitest + Supertest + mongodb-memory-server
 
 | Layer | File | What it tests |
 |-------|------|---------------|
 | Unit | `src/__tests__/gameStore.test.ts` | `createGame`, `listGames`, `getGame`, `applyMove`, `resignGame` |
-| Integration | `src/__tests__/routes/game.test.ts` | All HTTP endpoints via Supertest, including premium gating |
+| Integration | `src/__tests__/routes/game.test.ts` | All HTTP endpoints via Supertest, including premium gating and starting a game from a pre-played opening line |
+| Integration | `src/__tests__/routes/analyze.test.ts` | `POST /analyze` — FEN validation, move quality/eval-drop, graceful degradation when Stockfish is unavailable, prompt-injection stripping on `playerMoveSan` |
+| Integration | `src/__tests__/routes/me.test.ts` | `GET /me` premium-status derivation, `GET`/`PUT /me/profile` validation, Auth0 error handling (404/503) |
+| Integration | `src/__tests__/routes/webhook.test.ts` | `POST /webhooks/stripe` — premium role assignment and expiry on `checkout.session.completed`, missing-metadata and failure cases |
 
 **Mocks:**
 - `jwtCheck` middleware replaced with no-op injecting `req.auth = { payload: { sub: 'test-user' } }`
 - `getBestMove` (Stockfish) mocked to return `e7e5` instantly
+- `vitest.config.ts` injects dummy `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID`, `GROQ_API_KEY`, `FRONTEND_URL`, `AUTH0_DOMAIN`, `AUTH0_AUDIENCE` so the full route/module chain (which reads these at import time) can run without real credentials
 
 ```bash
 cd backend && npm test               # run once
@@ -484,11 +490,36 @@ cd backend && npm run test:coverage  # with coverage report
 
 | File | What it tests |
 |------|---------------|
-| `src/__tests__/api.test.ts` | All API client functions: HTTP method, URL, headers, body, error handling |
+| `src/__tests__/api.test.ts` | All API client functions: HTTP method, URL, headers, body, error handling, including the coach request's opening-context fields |
 
 ```bash
 cd frontend && npm test
 ```
+
+### End-to-end — Playwright
+
+Drives the real app in a browser against the local dev servers (`frontend && npm run dev` on :5173, `backend && npm run dev` on :3000 — both must be running, nothing is mocked). Two Auth0 test accounts log in once via `global.setup.ts` and reuse the saved session (`playwright/.auth/*.json`) across specs.
+
+| File | What it tests |
+|------|---------------|
+| `tests/new-game.spec.ts` | App loads for a logged-in user; new-game dialog opens |
+| `tests/pvp-game.spec.ts` | Starting a PvP game, resigning, returning to lobby |
+| `tests/ai-game.spec.ts` | Payment modal gating for non-premium users; level modal for premium users |
+| `tests/ai-game-play.spec.ts` | Playing a move against the AI, undo, eval bar/analysis updates, "Ask coach" |
+| `tests/game-history.spec.ts` | Game list filtering and loading a game from the list |
+| `tests/play-from-position.spec.ts` | "Play from here" — replaying from an earlier board position |
+| `tests/multiplayer.spec.ts` | Two authenticated users playing a multiplayer game against each other |
+| `tests/opening-training.spec.ts` | Öppningsskola: opening the overlay, search/filter, training a line, wrong-move feedback, hints, completing a line, and continuing into an AI game with the opening pre-applied |
+
+**Env:** `e2e/.env` with `PLAYWRIGHT_USER1_EMAIL`/`PASSWORD`, `PLAYWRIGHT_USER2_EMAIL`/`PASSWORD`, and optionally `PLAYWRIGHT_BASE_URL` (defaults to `http://localhost:5173`).
+
+```bash
+cd e2e && npm test           # headless, once
+cd e2e && npm run test:ui    # interactive UI mode
+cd e2e && npm run test:headed  # headed browser
+```
+
+> `e2e/` is not yet tracked in git — it exists locally but hasn't been committed to the repo.
 
 ---
 
