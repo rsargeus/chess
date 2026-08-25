@@ -43,10 +43,25 @@ function canAccess(game: { userId: string; whiteUserId: string | null; blackUser
   return game.userId === userId || game.whiteUserId === userId || game.blackUserId === userId;
 }
 
-export async function createGame(userId: string, mode: GameMode = 'pvp', computerLevel: number | null = null) {
+export async function createGame(
+  userId: string,
+  mode: GameMode = 'pvp',
+  computerLevel: number | null = null,
+  openingMoves?: { from: string; to: string; promotion?: string }[],
+  playerSide?: 'white' | 'black'
+) {
   const chess = new Chess();
   const level = mode === 'vs_computer' ? (computerLevel ?? 5) : null;
   const isMultiplayer = mode === 'multiplayer';
+
+  // Determine player color for vs_computer games
+  let storedPlayerColor: 'w' | 'b' | null = null;
+  if (mode === 'vs_computer') {
+    storedPlayerColor = playerSide === 'black' ? 'b' : 'w';
+  } else if (isMultiplayer) {
+    storedPlayerColor = 'w';
+  }
+
   const game = await Game.create({
     userId,
     whiteUserId: isMultiplayer ? userId : null,
@@ -56,7 +71,47 @@ export async function createGame(userId: string, mode: GameMode = 'pvp', compute
     status: 'active',
     mode,
     computerLevel: level,
+    playerColor: storedPlayerColor,
   });
+
+  if (openingMoves?.length) {
+    for (const { from, to, promotion } of openingMoves) {
+      const result = chess.move({ from, to, promotion: promotion ?? 'q' });
+      if (!result) break;
+      const updatedGame = await Game.findByIdAndUpdate(
+        game._id,
+        { $inc: { moveCounter: 1 } },
+        { new: true }
+      );
+      await saveMove(game._id, updatedGame!.moveCounter, from, to, result.san, chess.fen());
+    }
+    game.fen = chess.fen();
+    game.status = deriveStatus(chess);
+    await game.save();
+  }
+
+  // If playing as black vs computer and it's white's (AI's) turn after the opening, make AI move first
+  if (mode === 'vs_computer' && storedPlayerColor === 'b' && chess.turn() === 'w' &&
+      (game.status === 'active' || game.status === 'check')) {
+    const inc = await Game.findByIdAndUpdate(game._id, { $inc: { moveCounter: 1 } }, { new: true });
+    try {
+      const uci = await getBestMove(chess.fen(), level ?? 5);
+      const { from: cf, to: ct, promotion: cp } = parseUciMove(uci);
+      const compResult = chess.move({ from: cf, to: ct, promotion: cp ?? 'q' });
+      await saveMove(game._id, inc!.moveCounter, cf, ct, compResult.san, chess.fen());
+    } catch {
+      const fallback = randomMove(chess);
+      if (fallback) {
+        chess.move(fallback);
+        await saveMove(game._id, inc!.moveCounter, fallback.from, fallback.to, fallback.san, chess.fen());
+      }
+    }
+    game.fen = chess.fen();
+    game.status = deriveStatus(chess);
+    await game.save();
+  }
+
+  const moves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();
   return {
     gameId: game._id.toString(),
     fen: game.fen,
@@ -65,7 +120,15 @@ export async function createGame(userId: string, mode: GameMode = 'pvp', compute
     mode: game.mode,
     computerLevel: game.computerLevel,
     inviteCode: game.inviteCode,
-    playerColor: isMultiplayer ? 'w' : null,
+    playerColor: storedPlayerColor,
+    moves: moves.map((m) => ({
+      moveNumber: m.moveNumber,
+      from: m.from,
+      to: m.to,
+      san: m.san,
+      fenAfter: m.fenAfter,
+      playedAt: m.playedAt,
+    })),
   };
 }
 
@@ -129,7 +192,7 @@ export async function listGames(userId: string) {
     computerLevel: g.computerLevel,
     createdAt: g.createdAt,
     moveCount: countMap.get(g._id.toString()) ?? 0,
-    playerColor: g.mode === 'multiplayer' ? playerColor(g, userId) : null,
+    playerColor: g.mode === 'multiplayer' ? playerColor(g, userId) : (g.mode === 'vs_computer' ? (g.playerColor ?? 'w') : null),
     waitingForOpponent: g.mode === 'multiplayer' && !g.blackUserId,
     turn: g.fen.split(' ')[1] as 'w' | 'b',
   }));
@@ -150,7 +213,9 @@ export async function getGame(gameId: string, userId?: string) {
     mode: game.mode,
     computerLevel: game.computerLevel,
     inviteCode: game.inviteCode,
-    playerColor: game.mode === 'multiplayer' && userId ? playerColor(game, userId) : null,
+    playerColor: game.mode === 'multiplayer' && userId
+      ? playerColor(game, userId)
+      : game.mode === 'vs_computer' ? (game.playerColor ?? 'w') : null,
     waitingForOpponent: game.mode === 'multiplayer' && !game.blackUserId,
     moves: moves.map((m) => ({
       moveNumber: m.moveNumber,
@@ -178,6 +243,11 @@ export async function applyMove(gameId: string, from: string, to: string, userId
     if (!game.blackUserId) return { error: 'Waiting for opponent to join', status: 400 };
     const color = playerColor(game, userId);
     if (color !== chess.turn()) return { error: 'Not your turn', status: 400 };
+  }
+
+  // vs_computer: verify it's the player's (human's) turn
+  if (game.mode === 'vs_computer' && game.playerColor) {
+    if (game.playerColor !== chess.turn()) return { error: 'Not your turn', status: 400 };
   }
 
   let result;
@@ -237,6 +307,70 @@ export async function applyMove(gameId: string, from: string, to: string, userId
   };
 }
 
+export async function truncateMoves(gameId: string, userId: string, keepMoveCount: number) {
+  const game = await Game.findById(gameId);
+  if (!game) return { error: 'Game not found', status: 404 };
+  if (!canAccess(game, userId)) return { error: 'Game not found', status: 404 };
+  if (game.mode !== 'vs_computer') return { error: 'Only available in vs Computer mode', status: 400 };
+
+  // Delete all moves after keepMoveCount
+  await Move.deleteMany({ gameId: game._id, moveNumber: { $gt: keepMoveCount } });
+
+  const prevMove = keepMoveCount > 0
+    ? await Move.findOne({ gameId: game._id, moveNumber: keepMoveCount }).lean()
+    : null;
+  const restoredFen = prevMove ? prevMove.fenAfter : new Chess().fen();
+
+  const chess = new Chess(restoredFen);
+  game.fen = restoredFen;
+  game.status = deriveStatus(chess);
+  await game.save();
+
+  // If it's the computer's turn after truncation, play the AI move automatically
+  const aiColorAfterTruncate = game.playerColor === 'b' ? 'w' : 'b';
+  if (chess.turn() === aiColorAfterTruncate && (game.status === 'active' || game.status === 'check')) {
+    const inc = await Game.findByIdAndUpdate(game._id, { $inc: { moveCounter: 1 } }, { new: true });
+    const compMoveNumber = inc!.moveCounter;
+    try {
+      const level = game.computerLevel ?? 5;
+      const uci = await getBestMove(chess.fen(), level);
+      const { from: cf, to: ct, promotion: cp } = parseUciMove(uci);
+      const compResult = chess.move({ from: cf, to: ct, promotion: cp ?? 'q' });
+      await saveMove(game._id, compMoveNumber, cf, ct, compResult.san, chess.fen());
+      game.fen = chess.fen();
+      game.status = deriveStatus(chess);
+      await game.save();
+    } catch (err) {
+      logger.warn({ err }, 'Stockfish error during truncate AI move, falling back to random');
+      const fallback = randomMove(chess);
+      if (fallback) {
+        const compResult = chess.move(fallback);
+        await saveMove(game._id, compMoveNumber, fallback.from, fallback.to, compResult.san, chess.fen());
+        game.fen = chess.fen();
+        game.status = deriveStatus(chess);
+        await game.save();
+      }
+    }
+  }
+
+  const remainingMoves = await Move.find({ gameId: game._id }).sort({ moveNumber: 1 }).lean();
+  return {
+    gameId: game._id.toString(),
+    fen: game.fen,
+    turn: chess.turn() as 'w' | 'b',
+    status: game.status,
+    mode: game.mode,
+    computerLevel: game.computerLevel,
+    inviteCode: game.inviteCode,
+    playerColor: game.playerColor ?? null,
+    waitingForOpponent: false,
+    moves: remainingMoves.map(m => ({
+      moveNumber: m.moveNumber, from: m.from, to: m.to,
+      san: m.san, fenAfter: m.fenAfter, playedAt: m.playedAt,
+    })),
+  };
+}
+
 export async function undoMove(gameId: string, userId: string) {
   const game = await Game.findById(gameId);
   if (!game) return { error: 'Game not found', status: 404 };
@@ -269,7 +403,7 @@ export async function undoMove(gameId: string, userId: string) {
     mode: game.mode,
     computerLevel: game.computerLevel,
     inviteCode: game.inviteCode,
-    playerColor: null as 'w' | 'b' | null,
+    playerColor: game.playerColor ?? null,
     waitingForOpponent: false,
     moves: remainingMoves.map(m => ({
       moveNumber: m.moveNumber, from: m.from, to: m.to,

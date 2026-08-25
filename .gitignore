@@ -8,3 +8,5 @@ coverage/
 .claude/
 .mcp.json
 backend/bin/
+.wrangler/
+test-results/

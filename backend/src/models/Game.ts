@@ -12,6 +12,7 @@ export interface IGame extends Document {
   status: GameStatus;
   mode: GameMode;
   computerLevel: number | null;
+  playerColor: 'w' | 'b' | null; // vs_computer: which color the human plays
   moveCounter: number;
   createdAt: Date;
   updatedAt: Date;
@@ -36,6 +37,7 @@ const GameSchema = new Schema<IGame>(
       default: 'pvp',
     },
     computerLevel: { type: Number, default: null },
+    playerColor:   { type: String, enum: ['w', 'b', null], default: null },
   },
   { timestamps: true }
 );

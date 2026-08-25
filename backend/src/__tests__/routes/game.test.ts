@@ -166,3 +166,67 @@ describe('DELETE /games/:gameId', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('POST /games/:gameId/undo', () => {
+  it('undoes the last move in vs_computer game and returns updated state', async () => {
+    authState.roles = ['Premium'];
+    const created = await request(app).post('/games').send({ mode: 'vs_computer', computerLevel: 1 });
+    const gameId = created.body.gameId;
+    await request(app).post(`/games/${gameId}/moves`).send({ from: 'e2', to: 'e4' });
+
+    const res = await request(app).post(`/games/${gameId}/undo`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.moves)).toBe(true);
+  });
+
+  it('returns 400 when there are no moves to undo', async () => {
+    authState.roles = ['Premium'];
+    const created = await request(app).post('/games').send({ mode: 'vs_computer', computerLevel: 1 });
+    const gameId = created.body.gameId;
+
+    const res = await request(app).post(`/games/${gameId}/undo`);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 for undo in pvp mode', async () => {
+    const created = await request(app).post('/games').send({ mode: 'pvp' });
+    const gameId = created.body.gameId;
+    await request(app).post(`/games/${gameId}/moves`).send({ from: 'e2', to: 'e4' });
+
+    const res = await request(app).post(`/games/${gameId}/undo`);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/vs computer/i);
+  });
+
+  it('returns 400 for invalid gameId format', async () => {
+    const res = await request(app).post('/games/not-an-id/undo');
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /games/join/:inviteCode', () => {
+  it('returns 400 for invalid invite code format', async () => {
+    const res = await request(app).post('/games/join/invalid');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/invite code/i);
+  });
+
+  it('returns error for non-existent invite code', async () => {
+    const res = await request(app).post('/games/join/000000000000');
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});
+
+describe('POST /games/:gameId/moves on finished game', () => {
+  it('returns error when game is resigned', async () => {
+    const created = await request(app).post('/games').send({ mode: 'pvp' });
+    const gameId = created.body.gameId;
+    await request(app).delete(`/games/${gameId}`);
+
+    const res = await request(app)
+      .post(`/games/${gameId}/moves`)
+      .send({ from: 'e2', to: 'e4' });
+
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+});

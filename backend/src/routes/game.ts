@@ -19,7 +19,7 @@ function userId(req: Request): string {
 }
 
 router.post('/', async (req: Request, res: Response) => {
-  const { mode: rawMode, computerLevel: rawLevel } = req.body;
+  const { mode: rawMode, computerLevel: rawLevel, openingMoves, playerSide } = req.body;
   const mode = rawMode === 'vs_computer' ? 'vs_computer' : rawMode === 'multiplayer' ? 'multiplayer' : 'pvp';
 
   if (mode === 'vs_computer') {
@@ -33,7 +33,9 @@ router.post('/', async (req: Request, res: Response) => {
   }
 
   const level = mode === 'vs_computer' ? rawLevel : null;
-  const game = await store.createGame(userId(req), mode, level);
+  const validatedMoves = Array.isArray(openingMoves) ? openingMoves : undefined;
+  const validatedSide = playerSide === 'black' ? 'black' : playerSide === 'white' ? 'white' : undefined;
+  const game = await store.createGame(userId(req), mode, level, validatedMoves, validatedSide);
   res.status(201).json(game);
 });
 
@@ -75,6 +77,17 @@ router.post('/:gameId/moves', async (req: Request, res: Response) => {
 router.post('/:gameId/undo', async (req: Request, res: Response) => {
   if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
   const result = await store.undoMove(req.params.gameId, userId(req));
+  if ('error' in result) return res.status(safeHttpStatus(result.status)).json({ error: result.error });
+  res.json(result);
+});
+
+router.post('/:gameId/truncate', async (req: Request, res: Response) => {
+  if (!validObjectId(req.params.gameId)) return res.status(400).json({ error: 'Invalid game ID' });
+  const keepMoveCount = Number(req.body.keepMoveCount);
+  if (!Number.isInteger(keepMoveCount) || keepMoveCount < 0) {
+    return res.status(400).json({ error: 'keepMoveCount must be a non-negative integer' });
+  }
+  const result = await store.truncateMoves(req.params.gameId, userId(req), keepMoveCount);
   if ('error' in result) return res.status(safeHttpStatus(result.status)).json({ error: result.error });
   res.json(result);
 });
