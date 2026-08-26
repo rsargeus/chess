@@ -36,9 +36,16 @@ app.use(helmet({
   },
 }));
 
+// Only ever set in a local .env — never deployed to Render — so production's
+// real limits are unaffected no matter what. Exists because a full local
+// Playwright run (39 tests, mostly hitting /games) blows past the normal
+// budget well before finishing: 39 sequential e2e specs racked up 816
+// requests in one run, 139 of them 429'd.
+const rateLimitDisabled = process.env.DISABLE_RATE_LIMITING === 'true';
+
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300,
+  max: rateLimitDisabled ? 100_000 : 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many requests, please try again later' },
@@ -47,7 +54,7 @@ const apiLimiter = rateLimit({
 // Stricter limit for /analyze — each request invokes Stockfish + Groq
 const analyzeLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
-  max: 30,
+  max: rateLimitDisabled ? 100_000 : 30,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Too many analysis requests, please slow down' },
