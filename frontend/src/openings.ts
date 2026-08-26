@@ -95,7 +95,7 @@ export const OPENINGS: Opening[] = [
         id: 'ruy-exchange',
         name: 'Utbytesvarianten',
         eco: 'C68',
-        moves: ['e4','e5','Nf3','Nc6','Bb5','a6','Bxc6','dxc6','Nxe5','Qd4','Nf3','Qxe4+','Be2','Nf6'],
+        moves: ['e4','e5','Nf3','Nc6','Bb5','a6','Bxc6','dxc6','Nxe5','Qd4','Nf3','Qxe4+','Qe2','Qxe2+'],
         description: 'Vit byter löparen mot springaren och tar e5. Svart kompenserar med aktivt spel och dams aktivitet.',
         tips: [
           'Bxc6 ger svart dubblad c-bonde men öppnar spelet',
@@ -864,7 +864,7 @@ export const OPENINGS: Opening[] = [
         id: 'english-four-knights',
         name: 'Fyraspringare-variant',
         eco: 'A28',
-        moves: ['c4','e5','Nc3','Nf6','Nf3','Nc6','d4','exd4','Nxd4','Bb4','Bg5','h6','Bh4','Bxc3+','bxc3','Ne5','Bf2','Nxd4','cxd4'],
+        moves: ['c4','e5','Nc3','Nf6','Nf3','Nc6','d4','exd4','Nxd4','Bb4','Bg5','h6','Bh4','Bxc3+','bxc3','Ne5'],
         description: 'Svart spelar e5 — speglar en öppen öppning men med c4 istället för e4. Leder till komplexa ställningar.',
         tips: [
           'e5 i engelska ger en nästan öppen spelstil',
