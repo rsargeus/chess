@@ -54,7 +54,10 @@ describe('POST /analyze', () => {
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({
       bestMove: 'd2d4',
-      coachMessage: 'Good move!',
+      // Stockfish results are sent immediately without waiting on Groq —
+      // coachMessage is always empty here; the client fetches it separately
+      // via POST /coach on demand.
+      coachMessage: '',
     });
     expect(typeof res.body.scoreCp).toBe('number');
   });
@@ -82,7 +85,7 @@ describe('POST /analyze', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.bestMove).toBeNull();
-    expect(res.body.coachMessage).toBe('Good move!');
+    expect(res.body.coachMessage).toBe('');
   });
 
   it('strips invalid playerMoveSan to prevent prompt injection', async () => {
