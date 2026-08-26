@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Training Mode — Prototype v2</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    .hidden { display: none !important; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #160c04;
+      color: #d4c0a0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 10px 20px;
+      background: #1c0e04;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #5c3610;
+      flex-shrink: 0;
+    }
+    header h1 {
+      font-family: 'Cinzel', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      background: linear-gradient(135deg, #f0c97a 0%, #c8922a 50%, #e8b85a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: 0.06em;
+    }
+    .header-back {
+      background: transparent;
+      border: 1px solid #5c3610;
+      color: #c8a870;
+      padding: 5px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-family: 'Cinzel', serif;
+    }
+    .header-back:hover { border-color: #a07030; }
+
+    .layout { display: flex; flex: 1; overflow: hidden; }
+
+    /* ── LEFT: Library ── */
+    .library {
+      width: 230px;
+      flex-shrink: 0;
+      background: #1a0e06;
+      border-right: 1px solid #3a2010;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    .library-header {
+      padding: 12px 14px 8px;
+      font-family: 'Cinzel', serif;
+      font-size: 0.72rem;
+      color: #c8922a;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid #3a2010;
+      flex-shrink: 0;
+    }
+    .library-search { padding: 8px 10px; border-bottom: 1px solid #2a1808; flex-shrink: 0; }
+    .library-search input {
+      width: 100%;
+      background: #0e0804;
+      border: 1px solid #3a2010;
+      border-radius: 4px;
+      color: #d4c0a0;
+      padding: 5px 8px;
+      font-size: 0.78rem;
+      outline: none;
+    }
+    .library-search input::placeholder { color: #6a5040; }
+    .library-scroll { flex: 1; overflow-y: auto; }
+    .library-scroll::-webkit-scrollbar { width: 4px; }
+    .library-scroll::-webkit-scrollbar-thumb { background: #5c3610; border-radius: 2px; }
+
+    .lib-category {
+      padding: 8px 12px 4px;
+      font-size: 0.63rem;
+      color: #7a5830;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+    }
+
+    /* Opening group (collapsible) */
+    .lib-group { }
+    .lib-group-header {
+      padding: 7px 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+      user-select: none;
+    }
+    .lib-group-header:hover { background: #24140a; }
+    .lib-group-header.active { background: #2a1808; border-left-color: #d4a84b; }
+    .lib-group-name { font-size: 0.8rem; flex: 1; }
+    .lib-group-eco { font-size: 0.63rem; color: #7a5830; font-family: monospace; }
+    .lib-group-arrow { font-size: 0.6rem; color: #5c3610; transition: transform 0.2s; }
+    .lib-group-arrow.open { transform: rotate(90deg); }
+    .lib-side {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .side-w { background: #e8d8b0; border: 1px solid #7a6840; }
+    .side-b { background: #3a2010; border: 1px solid #7a5830; }
+
+    /* Variant items (indented) */
+    .lib-variants { display: none; }
+    .lib-variants.open { display: block; }
+    .lib-variant {
+      padding: 5px 12px 5px 30px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-left: 3px solid transparent;
+      font-size: 0.75rem;
+      color: #a09070;
+      transition: background 0.1s;
+    }
+    .lib-variant:hover { background: #24140a; color: #c8a870; }
+    .lib-variant.active { background: #1e1008; border-left-color: #c8922a; color: #e0c080; }
+    .lib-variant-eco { font-size: 0.6rem; font-family: monospace; color: #5a4030; margin-left: auto; }
+
+    /* Single opening (no variants) */
+    .lib-item {
+      padding: 7px 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-left: 3px solid transparent;
+      transition: background 0.1s;
+    }
+    .lib-item:hover { background: #24140a; }
+    .lib-item.active { background: #2a1808; border-left-color: #d4a84b; }
+    .lib-item-name { font-size: 0.8rem; flex: 1; }
+    .lib-item-eco { font-size: 0.63rem; color: #7a5830; font-family: monospace; }
+
+    /* ── CENTER ── */
+    .center {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      gap: 10px;
+      overflow: hidden;
+    }
+
+    .training-status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 16px;
+      background: #1a0e06;
+      border: 1px solid #3a2010;
+      border-radius: 8px;
+      width: 100%;
+      max-width: 430px;
+    }
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-you   { background: #4caf50; box-shadow: 0 0 6px #4caf5080; }
+    .dot-ai    { background: #ff9800; box-shadow: 0 0 6px #ff980080; }
+    .dot-ok    { background: #4caf50; }
+    .dot-error { background: #f44336; }
+    .dot-branch { background: #9c6af5; box-shadow: 0 0 6px #9c6af580; }
+    .status-text { font-size: 0.82rem; flex: 1; }
+    .status-progress { font-size: 0.72rem; color: #7a5830; font-family: 'Cinzel', serif; }
+
+    .board-wrap { position: relative; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      grid-template-rows: repeat(8, 1fr);
+      width: min(52vw, 390px);
+      height: min(52vw, 390px);
+      border: 2px solid #5c3610;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .sq {
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; position: relative; transition: background 0.1s;
+    }
+    .sq.light { background: #f0d9b5; }
+    .sq.dark  { background: #b58863; }
+    .sq.selected  { background: #7fc97a !important; }
+    .sq.hint-from { background: #90caf9 !important; }
+    .sq.hint-to   { background: #42a5f5 !important; }
+    .sq.last-from { background: #cdd26a !important; }
+    .sq.last-to   { background: #aaa23a !important; }
+    .sq.wrong-sq  { background: #ef9a9a !important; animation: shake 0.3s; }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      25% { transform: translateX(-4px); }
+      75% { transform: translateX(4px); }
+    }
+    .piece {
+      font-size: calc(min(52vw, 390px) / 10);
+      line-height: 1; user-select: none; pointer-events: none;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+    }
+    .coord-files {
+      display: grid; grid-template-columns: repeat(8, 1fr);
+      width: min(52vw, 390px);
+    }
+    .coord-files span { text-align: center; font-size: 0.58rem; color: #7a5830; }
+
+    /* Progress dots */
+    .move-dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; justify-content: center; }
+    .move-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #2a1808; border: 1px solid #5c3610;
+      transition: background 0.2s;
+    }
+    .move-dot.done    { background: #d4a84b; border-color: #d4a84b; }
+    .move-dot.current { background: #4caf50; border-color: #4caf50; box-shadow: 0 0 5px #4caf5080; }
+    .move-dot.branch  { background: #9c6af5; border-color: #9c6af5; box-shadow: 0 0 5px #9c6af580; }
+
+    /* ── VARIANT CHOICE OVERLAY ── */
+    .variant-choice {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: rgba(10,5,0,0.92);
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 3px;
+      padding: 20px;
+      text-align: center;
+    }
+    .variant-choice.show { display: flex; }
+    .variant-choice-title {
+      font-family: 'Cinzel', serif;
+      font-size: 0.9rem;
+      color: #f0c97a;
+    }
+    .variant-choice-sub { font-size: 0.75rem; color: #a09070; }
+    .variant-btns { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .variant-btn {
+      background: #1a0e06;
+      border: 1px solid #5c3610;
+      border-radius: 6px;
+      padding: 10px 14px;
+      cursor: pointer;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+      color: #d4c0a0;
+    }
+    .variant-btn:hover { background: #2a1808; border-color: #c8922a; }
+    .variant-btn-name { font-size: 0.82rem; font-weight: 600; color: #e0c080; }
+    .variant-btn-move { font-size: 0.72rem; font-family: monospace; color: #9c6af5; margin-top: 2px; }
+    .variant-btn-desc { font-size: 0.7rem; color: #8a7060; margin-top: 3px; line-height: 1.4; }
+
+    /* ── Completion overlay ── */
+    .completion-banner {
+      display: none;
+      position: absolute; inset: 0;
+      background: rgba(10,5,0,0.88);
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px;
+      border-radius: 3px; text-align: center; padding: 20px;
+    }
+    .completion-banner.show { display: flex; }
+    .completion-icon { font-size: 2.5rem; }
+    .completion-title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: #f0c97a; }
+    .completion-sub { font-size: 0.78rem; color: #a09070; line-height: 1.5; max-width: 280px; }
+    .completion-btns { display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap; justify-content: center; }
+
+    /* ── RIGHT: Info panel ── */
+    .info-panel {
+      width: 260px; flex-shrink: 0;
+      background: #1a0e06;
+      border-left: 1px solid #3a2010;
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .opening-detail {
+      flex: 1; overflow-y: auto; padding: 14px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .opening-detail::-webkit-scrollbar { width: 4px; }
+    .opening-detail::-webkit-scrollbar-thumb { background: #5c3610; border-radius: 2px; }
+
+    .opening-title { font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 600; color: #f0c97a; }
+    .opening-eco { font-size: 0.68rem; color: #7a5830; font-family: monospace; margin-top: 2px; }
+    .opening-variant-name {
+      font-size: 0.78rem; color: #9c6af5;
+      padding: 2px 7px; background: #1a1030; border: 1px solid #4a3080;
+      border-radius: 10px; display: inline-block; margin-top: 4px;
+    }
+    .side-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 0.7rem; padding: 3px 8px; border-radius: 10px;
+      background: #24140a; border: 1px solid #3a2010; color: #a09070;
+    }
+    .section-label {
+      font-size: 0.62rem; color: #7a5830; text-transform: uppercase;
+      letter-spacing: 0.1em; font-weight: 600; margin-bottom: 4px;
+    }
+    .opening-desc { font-size: 0.78rem; color: #c0a880; line-height: 1.6; }
+
+    /* Move sequence with branch points */
+    .moves-tree { display: flex; flex-direction: column; gap: 4px; }
+    .move-line { display: flex; flex-wrap: wrap; gap: 3px; align-items: center; }
+    .mv {
+      font-size: 0.7rem; font-family: monospace;
+      padding: 2px 6px; border-radius: 3px;
+      background: #24140a; border: 1px solid #3a2010; color: #c8a870;
+      transition: background 0.2s;
+    }
+    .mv.done    { background: #2a3a20; border-color: #4a6a30; color: #8bc34a; }
+    .mv.current { background: #0e2020; border-color: #2a7060; color: #4db6ac; font-weight: 700; }
+    .mv.branch-point { border-color: #4a3080; color: #b09af0; }
+    .branch-label {
+      font-size: 0.62rem; color: #7a5830;
+      padding: 1px 5px; background: #1a1030; border: 1px solid #3a2060;
+      border-radius: 8px; margin-left: 2px;
+    }
+
+    /* Tips */
+    .tips-list { list-style: none; display: flex; flex-direction: column; gap: 5px; }
+    .tips-list li {
+      font-size: 0.76rem; color: #c0a880; line-height: 1.4;
+      padding-left: 14px; position: relative;
+    }
+    .tips-list li::before {
+      content: '♟'; position: absolute; left: 0;
+      color: #d4a84b; font-size: 0.62rem; top: 1px;
+    }
+
+    /* Feedback */
+    .feedback-box {
+      padding: 8px 10px; border-radius: 5px;
+      font-size: 0.76rem; line-height: 1.5; display: none;
+    }
+    .feedback-box.ok     { background: #1a2e12; border: 1px solid #3a6020; color: #8bc34a; display: block; }
+    .feedback-box.err    { background: #2e1212; border: 1px solid #6a2020; color: #ef9a9a; display: block; }
+    .feedback-box.hint   { background: #12202e; border: 1px solid #204060; color: #90caf9; display: block; }
+    .feedback-box.branch { background: #1a1030; border: 1px solid #4a3080; color: #b09af0; display: block; }
+
+    /* Panel actions */
+    .panel-actions {
+      padding: 10px; border-top: 1px solid #3a2010;
+      display: flex; flex-direction: column; gap: 5px; flex-shrink: 0;
+    }
+    .btn {
+      padding: 7px 14px; border: none; border-radius: 5px;
+      cursor: pointer; font-family: 'Cinzel', serif; font-size: 0.72rem;
+      font-weight: 600; letter-spacing: 0.04em; width: 100%;
+    }
+    .btn-primary  { background: linear-gradient(135deg, #d4a84b 0%, #b8892a 100%); color: #1a0800; }
+    .btn-secondary { background: transparent; border: 1px solid #5c3610; color: #c8a870; }
+    .btn:hover { opacity: 0.85; }
+    .btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* Empty state */
+    .empty-state {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      height: 100%; gap: 10px; color: #5a4030;
+      text-align: center; padding: 20px;
+    }
+    .empty-state .icon { font-size: 2rem; }
+    .empty-state p { font-size: 0.78rem; line-height: 1.5; }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="header-back">← Tillbaka</button>
+  <h1>Öppningsskola</h1>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT: Library -->
+  <div class="library">
+    <div class="library-header">Öppningar</div>
+    <div class="library-search">
+      <input type="text" placeholder="Sök öppning…" />
+    </div>
+    <div class="library-scroll" id="lib-scroll"></div>
+  </div>
+
+  <!-- CENTER: Board -->
+  <div class="center">
+    <div class="training-status" id="training-status">
+      <div class="status-dot dot-you" id="status-dot"></div>
+      <div class="status-text" id="status-text">Välj en öppning till vänster för att börja träna.</div>
+      <div class="status-progress" id="status-progress"></div>
+    </div>
+
+    <div class="board-wrap">
+      <div class="board" id="board"></div>
+
+      <!-- Variant choice overlay -->
+      <div class="variant-choice" id="variant-choice">
+        <div class="variant-choice-title">Välj variant att öva</div>
+        <div class="variant-choice-sub" id="vc-sub"></div>
+        <div class="variant-btns" id="vc-btns"></div>
+      </div>
+
+      <!-- Completion overlay -->
+      <div class="completion-banner" id="completion-banner">
+        <div class="completion-icon">🏆</div>
+        <div class="completion-title" id="comp-title">Varianten klar!</div>
+        <div class="completion-sub" id="comp-sub"></div>
+        <div class="completion-btns">
+          <button class="btn btn-primary" onclick="startFreePlay()">Fortsätt mot AI</button>
+          <button class="btn btn-secondary" onclick="resetCurrent()">Öva igen</button>
+          <button class="btn btn-secondary" onclick="practiceOtherVariant()">Annan variant</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="coord-files">
+      <span>a</span><span>b</span><span>c</span><span>d</span>
+      <span>e</span><span>f</span><span>g</span><span>h</span>
+    </div>
+    <div class="move-dots" id="move-dots"></div>
+  </div>
+
+  <!-- RIGHT: Info -->
+  <div class="info-panel">
+    <div class="opening-detail" id="info-content">
+      <div class="empty-state">
+        <div class="icon">♟</div>
+        <p>Välj en öppning i biblioteket för att se beskrivning och börja träna.</p>
+      </div>
+    </div>
+    <div class="panel-actions" id="panel-actions" style="display:none">
+      <button class="btn btn-secondary" id="hint-btn" onclick="showHint()">💡 Visa ledtråd</button>
+      <button class="btn btn-secondary" onclick="resetCurrent()">↺ Börja om varianten</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────
+// DATA STRUCTURE
+// Each node in the tree:
+//   { move, fen, comment, tip, children: [] }
+//   - move: SAN of the move that led to this node
+//   - fen: position after this move
+//   - children: array of next nodes (branch = multiple children)
+//   - comment: shown when we arrive here
+//   - tip: shown as hint
+// Leaf nodes = end of opening
+//
+// Branch resolution:
+//   - OPPONENT at a branch: we ask the player which variant to practice
+//   - PLAYER at a branch: theoretically free, but we validate against expected
+// ─────────────────────────────────────────────────────
+
+const PIECE_UNICODE = {
+  wK:'♔',wQ:'♕',wR:'♖',wB:'♗',wN:'♘',wP:'♙',
+  bK:'♚',bQ:'♛',bR:'♜',bB:'♝',bN:'♞',bP:'♟',
+};
+
+const VIENNA = {
+  id: 'vienna',
+  name: 'Wienpartiet',
+  eco: 'C25',
+  side: 'white',   // player plays white
+  desc: 'Vit bygger upp ett starkt centrum och siktar på aggressivt spel. Kan leda till skarpa gambits eller solida positioner beroende på svart.',
+  tips: [
+    'Nc3 stöder ett eventuellt d4 eller f4',
+    'Vit kan välja aggressiv gambitstil (f4) eller solid uppbyggnad (Bc4)',
+    'Svart kan svara på många sätt — du kan välja vilken variant du vill öva',
+    'Öppnar ofta för taktiska kombinationer kring e5',
+  ],
+  // Opening move tree — we display this as branching path
+  tree: {
+    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    children: [
+      {
+        move: 'e4', color: 'w',
+        fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+        children: [
+          {
+            move: 'e5', color: 'b',
+            fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2',
+            children: [
+              {
+                move: 'Nc3', color: 'w',
+                fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2',
+                comment: 'Wienpartiet uppstår! Nu väljer svart hur de vill svara.',
+                // BRANCH POINT — opponent (black) can respond in several ways
+                // We ask player: which response do you want to practice against?
+                isBranchChoice: true,
+                branchPrompt: 'Svart kan svara på flera sätt. Vilken variant vill du öva?',
+                children: [
+                  {
+                    variantName: 'Vienngambit',
+                    variantEco: 'C28',
+                    variantDesc: 'Svart spelar ...Nf6 och vit svarar aggressivt med f4.',
+                    move: 'Nf6', color: 'b',
+                    fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 3',
+                    children: [
+                      {
+                        move: 'f4', color: 'w',
+                        fen: 'r1bqkb1r/pppp1ppp/2n2n2/4p3/4PP2/2N5/PPPP2PP/R1BQKBNR b KQkq f3 0 3',
+                        comment: 'Vienngambitet! Vit offrar eller hotar bonde för snabbt initiativ.',
+                        isBranchChoice: true,
+                        branchPrompt: 'Svart kan acceptera eller avböja gambitet:',
+                        children: [
+                          {
+                            variantName: 'Accepterat',
+                            variantEco: 'C28',
+                            variantDesc: 'Svart tar bonden med exf4.',
+                            move: 'exf4', color: 'b',
+                            fen: 'r1bqkb1r/pppp1ppp/2n2n2/8/4Pp2/2N5/PPPP2PP/R1BQKBNR w KQkq - 0 4',
+                            comment: 'Gambitet accepterat! Vit får öppna linjer.',
+                            children: [
+                              {
+                                move: 'e5', color: 'w',
+                                fen: 'r1bqkb1r/pppp1ppp/2n5/4P3/5p2/2N5/PPPP2PP/R1BQKBNR b KQkq - 0 4',
+                                comment: 'e5 driver bort springaren och öppnar upp spelet!',
+                                children: [] // leaf — öppningen avslutad
+                              }
+                            ]
+                          },
+                          {
+                            variantName: 'Avböjt (Steinitz)',
+                            variantEco: 'C26',
+                            variantDesc: 'Svart avböjer med d5 och utmanar centrum.',
+                            move: 'd5', color: 'b',
+                            fen: 'r1bqkb1r/ppp2ppp/2n2n2/3pp3/4PP2/2N5/PPPP2PP/R1BQKBNR w KQkq d6 0 4',
+                            comment: 'd5! Svart avböjer gambitet och utmanar centrum direkt.',
+                            children: [
+                              {
+                                move: 'fxe5', color: 'w',
+                                fen: 'r1bqkb1r/ppp2ppp/2n2n2/3pP3/4P3/2N5/PPPP2PP/R1BQKBNR b KQkq - 0 4',
+                                children: []
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    variantName: 'Klassisk variant',
+                    variantEco: 'C25',
+                    variantDesc: 'Svart spelar ...Nc6, solidare med symmetriskt centrum.',
+                    move: 'Nc6', color: 'b',
+                    fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq - 2 3',
+                    comment: '...Nc6 — klassisk uppbyggnad. Vit kan nu välja Bc4 (Biskopsvariant) eller f4.',
+                    children: [
+                      {
+                        move: 'Bc4', color: 'w',
+                        fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/2B1P3/2N5/PPPP1PPP/R1BQK1NR b KQkq - 3 3',
+                        comment: 'Bc4 — Biskopsvarianten. Löparen pekar mot f7!',
+                        children: [
+                          {
+                            move: 'Bc5', color: 'b',
+                            fen: 'r1bqk1nr/pppp1ppp/2n5/2b1p3/2B1P3/2N5/PPPP1PPP/R1BQK1NR w KQkq - 4 4',
+                            comment: 'Symmetrisk ställning — båda har löpare på c-filen. Spänning!',
+                            children: []
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    variantName: 'Falkbeer (aggressiv)',
+                    variantEco: 'C26',
+                    variantDesc: 'Svart spelar ...f5, ett aggressivt kontragambit.',
+                    move: 'f5', color: 'b',
+                    fen: 'rnbqkbnr/pppp2pp/8/4pp2/4P3/2N5/PPPP1PPP/R1BQKBNR w KQkq f6 0 3',
+                    comment: '...f5! Svart spelar aggressivt och utmanar vits centrum!',
+                    children: [
+                      {
+                        move: 'Nf3', color: 'w',
+                        fen: 'rnbqkbnr/pppp2pp/8/4pp2/4P3/2N2N2/PPPP1PPP/R1BQKB1R b KQkq - 1 3',
+                        comment: 'Nf3 pressar e5-bonden. Komplicerat spel uppstår.',
+                        children: []
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+};
+
+// Simple single-line opening for comparison
+const RUY = {
+  id: 'ruy', name: 'Ruy López', eco: 'C65', side: 'white',
+  desc: 'En av schackets äldsta och mest analyserade öppningar. Vit angriper springaren som försvarar e5-bonden.',
+  tips: ['Bb5 skapar pin mot Nc6','Leder ofta till Morphy-försvaret (a6)','Kontrollera centrum med e4+d4'],
+  tree: {
+    fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    children: [{
+      move: 'e4', color: 'w',
+      fen: 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1',
+      children: [{
+        move: 'e5', color: 'b',
+        fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2',
+        children: [{
+          move: 'Nf3', color: 'w',
+          fen: 'rnbqkbnr/pppp1ppp/8/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq - 1 2',
+          children: [{
+            move: 'Nc6', color: 'b',
+            fen: 'r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3',
+            children: [{
+              move: 'Bb5', color: 'w',
+              fen: 'r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3',
+              comment: 'Ruy López uppstår! Löparen på b5 skapar tryck mot Nc6.',
+              children: []
+            }]
+          }]
+        }]
+      }]
+    }]
+  }
+};
+
+const OPENINGS_DATA = [VIENNA, RUY];
+
+// ─────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────
+
+let selectedOpening = null;
+let currentNode = null;      // current node in the tree
+let awaitingPlayer = false;
+let hintFromSq = null, hintToSq = null;
+let lastFrom = null, lastTo = null;
+let selected = null;
+let isComplete = false;
+let pathNodes = [];          // all nodes visited so far
+
+// ─────────────────────────────────────────────────────
+// BOARD RENDER
+// ─────────────────────────────────────────────────────
+
+function fenToGrid(fen) {
+  const rows = fen.split(' ')[0].split('/');
+  return rows.map(row => {
+    const r = [];
+    for (const ch of row) {
+      if (/\d/.test(ch)) for (let i = 0; i < +ch; i++) r.push(null);
+      else r.push(ch);
+    }
+    return r;
+  });
+}
+
+function sqName(r, c) { return 'abcdefgh'[c] + (8 - r); }
+
+function renderBoard(fen) {
+  const el = document.getElementById('board');
+  const grid = fenToGrid(fen);
+  el.innerHTML = '';
+  for (let r = 0; r < 8; r++) {
+    for (let c = 0; c < 8; c++) {
+      const name = sqName(r, c);
+      const div = document.createElement('div');
+      div.className = 'sq ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+      div.dataset.sq = name;
+      if (name === lastFrom) div.classList.add('last-from');
+      if (name === lastTo)   div.classList.add('last-to');
+      if (name === selected) div.classList.add('selected');
+      if (name === hintFromSq) div.classList.add('hint-from');
+      if (name === hintToSq)   div.classList.add('hint-to');
+      const p = grid[r][c];
+      if (p) {
+        const span = document.createElement('span');
+        span.className = 'piece';
+        span.textContent = PIECE_UNICODE[(p === p.toUpperCase() ? 'w' : 'b') + p.toUpperCase()] || p;
+        div.appendChild(span);
+      }
+      div.addEventListener('click', () => onSqClick(name));
+      el.appendChild(div);
+    }
+  }
+}
+
+function diffFen(f1, f2) {
+  const b1 = fenToGrid(f1), b2 = fenToGrid(f2);
+  let disappeared = [], appeared = [];
+  for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) {
+    if (b1[r][c] && !b2[r][c]) disappeared.push({ r, c, p: b1[r][c] });
+    if (!b1[r][c] && b2[r][c]) appeared.push({ r, c, p: b2[r][c] });
+    if (b1[r][c] && b2[r][c] && b1[r][c] !== b2[r][c]) {
+      disappeared.push({ r, c, p: b1[r][c] });
+      appeared.push({ r, c, p: b2[r][c] });
+    }
+  }
+  if (!appeared.length) return { from: null, to: null };
+  const moverIsUpper = appeared[0].p === appeared[0].p.toUpperCase();
+  const fromCand = disappeared.filter(d => (d.p === d.p.toUpperCase()) === moverIsUpper);
+  return {
+    from: fromCand.length ? sqName(fromCand[0].r, fromCand[0].c) : null,
+    to: sqName(appeared[0].r, appeared[0].c)
+  };
+}
+
+// ─────────────────────────────────────────────────────
+// GAME FLOW
+// ─────────────────────────────────────────────────────
+
+function startOpening(op) {
+  selectedOpening = op;
+  currentNode = op.tree;
+  awaitingPlayer = false;
+  isComplete = false;
+  selected = null;
+  lastFrom = lastTo = null;
+  hintFromSq = hintToSq = null;
+  pathNodes = [op.tree];
+
+  document.getElementById('completion-banner').classList.remove('show');
+  document.getElementById('variant-choice').classList.remove('show');
+  document.getElementById('panel-actions').style.display = '';
+
+  renderInfoPanel(op);
+  renderBoard(currentNode.fen);
+  renderProgress();
+
+  // Start advancing through the tree
+  setTimeout(advance, 400);
+}
+
+function advance() {
+  if (!currentNode || isComplete) return;
+  if (!currentNode.children || currentNode.children.length === 0) {
+    // Leaf — done!
+    isComplete = true;
+    showCompletion();
+    return;
+  }
+
+  const next = currentNode.children[0]; // next node (or branch point)
+
+  // Is this a branch choice?
+  if (currentNode.isBranchChoice) {
+    showBranchChoice(currentNode);
+    return;
+  }
+
+  // Is it the player's turn?
+  if (next.color === selectedOpening.side[0]) {
+    awaitingPlayer = true;
+    setStatus('you', `Din tur — spela ${next.move}`);
+    hideFeedback();
+  } else {
+    // AI plays
+    awaitingPlayer = false;
+    setStatus('ai', 'Motståndaren spelar…');
+    setTimeout(() => {
+      playNode(next);
+    }, 700);
+  }
+}
+
+function playNode(node) {
+  const prevFen = currentNode.fen;
+  const { from, to } = diffFen(prevFen, node.fen);
+  lastFrom = from; lastTo = to;
+  currentNode = node;
+  pathNodes.push(node);
+  hintFromSq = hintToSq = null;
+  selected = null;
+
+  renderBoard(currentNode.fen);
+  renderProgress();
+
+  if (node.comment) {
+    showFeedback('branch', node.comment);
+  }
+
+  setTimeout(advance, node.color === selectedOpening.side[0] ? 300 : 800);
+}
+
+function showBranchChoice(branchNode) {
+  const vc = document.getElementById('variant-choice');
+  document.getElementById('vc-sub').textContent = branchNode.branchPrompt || 'Välj en variant:';
+  const btns = document.getElementById('vc-btns');
+  btns.innerHTML = '';
+  for (const child of branchNode.children) {
+    const btn = document.createElement('button');
+    btn.className = 'variant-btn';
+    btn.innerHTML = `
+      <div class="variant-btn-name">${child.variantName || child.move}</div>
+      <div class="variant-btn-move">${child.move}${child.variantEco ? ' — ' + child.variantEco : ''}</div>
+      ${child.variantDesc ? `<div class="variant-btn-desc">${child.variantDesc}</div>` : ''}
+    `;
+    btn.addEventListener('click', () => {
+      vc.classList.remove('show');
+      setStatus('ai', 'Motståndaren spelar…');
+      setTimeout(() => {
+        playNode(child);
+      }, 300);
+    });
+    btns.appendChild(btn);
+  }
+  vc.classList.add('show');
+  setStatus('branch', 'Välj variant att öva');
+}
+
+// ─────────────────────────────────────────────────────
+// PLAYER MOVE
+// ─────────────────────────────────────────────────────
+
+function onSqClick(sq) {
+  if (!awaitingPlayer || isComplete) return;
+
+  const fen = currentNode.fen;
+
+  if (!selected) {
+    const grid = fenToGrid(fen);
+    const c = 'abcdefgh'.indexOf(sq[0]);
+    const r = 8 - parseInt(sq[1]);
+    if (grid[r][c]) { selected = sq; renderBoard(fen); }
+    return;
+  }
+
+  const from = selected, to = sq;
+  selected = null;
+  if (from === to) { renderBoard(fen); return; }
+
+  // Find expected next player node
+  const expectedNode = currentNode.children[0];
+  const expectedMove = diffFen(currentNode.fen, expectedNode.fen);
+
+  if (from === expectedMove.from && to === expectedMove.to) {
+    // Correct
+    awaitingPlayer = false;
+    showFeedback('ok', `✓ Rätt! ${expectedNode.move}`);
+    hintFromSq = hintToSq = null;
+    playNode(expectedNode);
+  } else {
+    // Wrong
+    showFeedback('err', `✗ Inte rätt drag. Förväntat: ${expectedNode.move}. Klicka 💡 för ledtråd.`);
+    flashSq(from);
+    renderBoard(fen);
+  }
+}
+
+function flashSq(sq) {
+  const el = document.querySelector(`[data-sq="${sq}"]`);
+  if (!el) return;
+  el.classList.add('wrong-sq');
+  setTimeout(() => el.classList.remove('wrong-sq'), 350);
+}
+
+// ─────────────────────────────────────────────────────
+// HINT
+// ─────────────────────────────────────────────────────
+
+function showHint() {
+  if (!awaitingPlayer || !currentNode?.children?.length) return;
+  const next = currentNode.children[0];
+  const { from, to } = diffFen(currentNode.fen, next.fen);
+  hintFromSq = from; hintToSq = to;
+  showFeedback('hint', `💡 Flytta ${next.move}: från ${from} till ${to}`);
+  renderBoard(currentNode.fen);
+}
+
+// ─────────────────────────────────────────────────────
+// PROGRESS & STATUS
+// ─────────────────────────────────────────────────────
+
+function flattenPath(node, acc = []) {
+  acc.push(node);
+  if (node.children?.length === 1) flattenPath(node.children[0], acc);
+  // stop at branch points — path is dynamic
+  return acc;
+}
+
+function renderProgress() {
+  const dots = document.getElementById('move-dots');
+  const strip = document.getElementById('moves-strip');
+  if (!dots) return;
+
+  // Build a flat representation of what's been played + what's ahead (main line)
+  const playedMoves = pathNodes.filter(n => n.move);
+  dots.innerHTML = playedMoves.map((n, i) => {
+    const cls = 'move-dot' + (i < playedMoves.length - 1 ? ' done' : ' current');
+    return `<div class="${cls}" title="${n.move}"></div>`;
+  }).join('');
+
+  // Update move strip in info panel
+  if (strip) {
+    strip.querySelectorAll('.mv').forEach((el, i) => {
+      el.className = 'mv';
+      const nodeMove = playedMoves[i]?.move;
+      if (i < playedMoves.length - 1) el.classList.add('done');
+      else if (i === playedMoves.length - 1) el.classList.add('current');
+    });
+  }
+
+  // Progress label
+  document.getElementById('status-progress').textContent = playedMoves.length
+    ? `${playedMoves.length} drag` : '';
+}
+
+function setStatus(type, text) {
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('status-dot');
+  dot.className = 'status-dot ' + {
+    you: 'dot-you', ai: 'dot-ai', ok: 'dot-ok',
+    err: 'dot-error', branch: 'dot-branch'
+  }[type];
+}
+
+function showFeedback(type, msg) {
+  const el = document.getElementById('feedback-box');
+  if (!el) return;
+  el.className = 'feedback-box ' + type;
+  el.textContent = msg;
+}
+
+function hideFeedback() {
+  const el = document.getElementById('feedback-box');
+  if (el) el.className = 'feedback-box';
+}
+
+function showCompletion() {
+  const banner = document.getElementById('completion-banner');
+  document.getElementById('comp-title').textContent = `${selectedOpening.name} — klar!`;
+  document.getElementById('comp-sub').textContent =
+    `Du spelade igenom varianten korrekt. Nu kan du fortsätta mot AI från denna ställning, eller öva en annan variant.`;
+  banner.classList.add('show');
+  setStatus('ok', '🏆 Varianten avklarad!');
+}
+
+function resetCurrent() { if (selectedOpening) startOpening(selectedOpening); }
+function startFreePlay() { alert('→ Startar vs-dator från:\n' + currentNode.fen); }
+function practiceOtherVariant() { resetCurrent(); }
+
+// ─────────────────────────────────────────────────────
+// INFO PANEL
+// ─────────────────────────────────────────────────────
+
+function renderInfoPanel(op) {
+  // Collect all variant names from the tree
+  const variants = collectVariants(op.tree, []);
+
+  document.getElementById('info-content').innerHTML = `
+    <div>
+      <div class="opening-title">${op.name}</div>
+      <div class="opening-eco">${op.eco}</div>
+    </div>
+    <div class="side-badge">
+      <div class="lib-side ${op.side === 'white' ? 'side-w' : 'side-b'}" style="width:8px;height:8px;border-radius:50%"></div>
+      Du spelar som ${op.side === 'white' ? 'Vit' : 'Svart'}
+    </div>
+    <div>
+      <div class="section-label">Om öppningen</div>
+      <div class="opening-desc">${op.desc}</div>
+    </div>
+    ${variants.length ? `
+    <div>
+      <div class="section-label">Varianter i denna öppning</div>
+      <div class="moves-tree">
+        ${variants.map(v => `
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+            <span style="font-size:0.7rem;color:#5a4030">▸</span>
+            <span style="font-size:0.75rem;color:#b09af0">${v.name}</span>
+            <span style="font-size:0.63rem;color:#5a4030;font-family:monospace">${v.eco || ''}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
+    <div>
+      <div class="section-label">Aktuella drag</div>
+      <div class="moves-strip" id="moves-strip">
+        ${getMovesSan(op.tree).map((m, i) => `<span class="mv" data-i="${i}">${i % 2 === 0 ? Math.floor(i/2)+1+'. ' : ''}${m}</span>`).join('')}
+      </div>
+    </div>
+    <div>
+      <div class="section-label">Tips &amp; idéer</div>
+      <ul class="tips-list">
+        ${op.tips.map(t => `<li>${t}</li>`).join('')}
+      </ul>
+    </div>
+    <div id="feedback-box" class="feedback-box"></div>
+  `;
+}
+
+function collectVariants(node, acc) {
+  if (node.variantName) acc.push({ name: node.variantName, eco: node.variantEco });
+  if (node.children) node.children.forEach(c => collectVariants(c, acc));
+  return acc;
+}
+
+function getMovesSan(node, acc = []) {
+  if (node.move) acc.push(node.move);
+  if (node.children?.length === 1) getMovesSan(node.children[0], acc);
+  return acc;
+}
+
+// ─────────────────────────────────────────────────────
+// LIBRARY
+// ─────────────────────────────────────────────────────
+
+function renderLibrary() {
+  const scroll = document.getElementById('lib-scroll');
+  scroll.innerHTML = `
+    <div class="lib-category">e4 — Öppna spel</div>
+
+    <div class="lib-group">
+      <div class="lib-group-header" id="grp-vienna" onclick="toggleGroup('vienna')">
+        <div class="lib-side side-w"></div>
+        <div class="lib-group-name">Wienpartiet</div>
+        <div class="lib-group-eco">C25</div>
+        <div class="lib-group-arrow" id="arrow-vienna">▶</div>
+      </div>
+      <div class="lib-variants" id="variants-vienna">
+        <div class="lib-variant" onclick="selectVariantPath('vienna', 'gambit-accepted')">
+          <div>Vienngambit — Accepterat</div>
+          <div class="lib-variant-eco">C28</div>
+        </div>
+        <div class="lib-variant" onclick="selectVariantPath('vienna', 'gambit-declined')">
+          <div>Vienngambit — Avböjt</div>
+          <div class="lib-variant-eco">C26</div>
+        </div>
+        <div class="lib-variant" onclick="selectVariantPath('vienna', 'classical')">
+          <div>Klassisk variant (Nc6)</div>
+          <div class="lib-variant-eco">C25</div>
+        </div>
+        <div class="lib-variant" onclick="selectVariantPath('vienna', 'falkbeer')">
+          <div>Falkbeer (f5)</div>
+          <div class="lib-variant-eco">C26</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lib-item" onclick="selectOpening('ruy')">
+      <div class="lib-side side-w"></div>
+      <div class="lib-item-name">Ruy López</div>
+      <div class="lib-item-eco">C65</div>
+    </div>
+
+    <div class="lib-category">d4 — Slutna spel</div>
+    <div class="lib-item" style="opacity:0.5">
+      <div class="lib-side side-w"></div>
+      <div class="lib-item-name">Drottningsgambit</div>
+      <div class="lib-item-eco">D06</div>
+    </div>
+    <div class="lib-item" style="opacity:0.5">
+      <div class="lib-side side-b"></div>
+      <div class="lib-item-name">Kungaindisk</div>
+      <div class="lib-item-eco">E60</div>
+    </div>
+  `;
+}
+
+function toggleGroup(id) {
+  const variants = document.getElementById('variants-' + id);
+  const arrow = document.getElementById('arrow-' + id);
+  const header = document.getElementById('grp-' + id);
+  const isOpen = variants.classList.contains('open');
+  variants.classList.toggle('open', !isOpen);
+  arrow.classList.toggle('open', !isOpen);
+}
+
+function selectOpening(id) {
+  const op = OPENINGS_DATA.find(o => o.id === id);
+  if (op) startOpening(op);
+}
+
+function selectVariantPath(opId, variantId) {
+  // For the prototype, just start the opening and let it walk to that variant
+  // In real implementation, we'd pre-select the path at each branch point
+  const op = OPENINGS_DATA.find(o => o.id === opId);
+  if (op) {
+    startOpening(op);
+    // Auto-select variant after branch point appears (simplified demo)
+    setTimeout(() => {
+      const vcBtns = document.querySelectorAll('.variant-btn');
+      const variantMap = {
+        'gambit-accepted': 'Vienngambit',
+        'gambit-declined': 'Avböjt (Steinitz)',
+        'classical': 'Klassisk variant',
+        'falkbeer': 'Falkbeer (aggressiv)',
+      };
+      const targetName = variantMap[variantId];
+      for (const btn of vcBtns) {
+        if (btn.querySelector('.variant-btn-name')?.textContent === targetName) {
+          btn.click(); break;
+        }
+      }
+    }, 2500);
+  }
+}
+
+// ─────────────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────────────
+
+renderLibrary();
+renderBoard('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1');
+
+// Auto-open Vienna for demo
+setTimeout(() => selectOpening('vienna'), 300);
+</script>
+</body>
+</html>
